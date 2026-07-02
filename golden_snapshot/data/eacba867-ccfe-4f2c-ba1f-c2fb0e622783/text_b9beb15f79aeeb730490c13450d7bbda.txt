@@ -1,0 +1,1 @@
+Runbook: auth-service. The auth-service validates login tokens and is required by the payments-service. It reads session state from the primary session-store.

@@ -1,0 +1,1 @@
+Runbook: session-store. The session-store is the primary store for user session state; the auth-service reads session state directly from it. If auth-service latency is high, check the session-store connection pool and its hit rate.

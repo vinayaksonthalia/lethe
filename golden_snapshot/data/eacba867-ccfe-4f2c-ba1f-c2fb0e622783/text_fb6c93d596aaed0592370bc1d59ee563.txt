@@ -1,0 +1,1 @@
+Runbook: notification-service. The notification-service sends customer emails and SMS. It delivers all email through the cloud-mailer. On delivery failures, check the cloud-mailer status and the notification queue depth.

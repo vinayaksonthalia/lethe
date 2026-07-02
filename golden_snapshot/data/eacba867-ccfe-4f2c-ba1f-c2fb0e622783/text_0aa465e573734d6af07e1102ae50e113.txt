@@ -1,0 +1,1 @@
+Runbook: cdn-transform. The cdn-transform service resizes and optimizes product images at the edge for the cdn. If product images load slowly or look wrong, check the cdn-transform edge workers and their queue.

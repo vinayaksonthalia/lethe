@@ -1,0 +1,1 @@
+Runbook: cdn. The cdn serves all static assets and product images to the storefront. On cache-miss storms, check origin health.

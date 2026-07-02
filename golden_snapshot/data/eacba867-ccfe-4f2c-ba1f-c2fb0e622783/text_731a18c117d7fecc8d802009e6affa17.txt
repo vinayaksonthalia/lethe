@@ -1,0 +1,1 @@
+Ownership: api-gateway and auth-service are owned by the core-platform team; payments-service by the payments team; search-index by the discovery team; notification-service by the growth team.

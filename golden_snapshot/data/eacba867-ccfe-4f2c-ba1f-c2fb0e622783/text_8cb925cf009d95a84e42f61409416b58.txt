@@ -1,0 +1,1 @@
+Runbook: monitoring. The monitoring stack scrapes metrics from every service; if dashboards go blank, check the metrics collector and remote-write endpoint.

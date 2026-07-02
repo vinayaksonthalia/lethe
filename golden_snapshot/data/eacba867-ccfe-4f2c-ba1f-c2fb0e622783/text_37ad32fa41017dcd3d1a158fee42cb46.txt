@@ -1,0 +1,1 @@
+Runbook: api-gateway. The api-gateway routes all storefront traffic to backend services and enforces rate limits. On 5xx spikes, check upstream health and recent deploys.

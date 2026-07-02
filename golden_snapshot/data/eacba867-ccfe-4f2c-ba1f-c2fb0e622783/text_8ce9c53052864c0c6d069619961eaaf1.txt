@@ -1,0 +1,1 @@
+Runbook: email-relay. When notifications are failing to send, restart the email-relay daemon and clear its outbound spool; the email-relay handles all outgoing platform email.

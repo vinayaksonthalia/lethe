@@ -1,0 +1,1 @@
+Runbook: payments-service. The payments-service charges customers and calls the auth-service to validate each login token first. It connects to the payments-db via a bounded connection pool.

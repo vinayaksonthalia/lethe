@@ -1,0 +1,1 @@
+Runbook: cloud-mailer. The cloud-mailer is the current email delivery provider for the notification-service. Check its API status page and bounce rate when emails are not being delivered.

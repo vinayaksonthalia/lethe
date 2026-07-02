@@ -1,0 +1,49 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lethe — on-call memory that forgets the stale stuff">
+  <defs>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#eaf1f9"/>
+      <stop offset="0.55" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.7"/>
+      <stop offset="0.55" stop-color="#6366f1" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="wave2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#818cf8" stop-opacity="0.35"/>
+      <stop offset="0.65" stop-color="#22d3ee" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.4" r="0.62">
+      <stop offset="0" stop-color="#1a2438" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#0a0e16" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="1.3" cy="1.3" r="1.3" fill="#9fb0c8" fill-opacity="0.05"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="360" rx="22" fill="#0a0e16"/>
+  <rect width="1200" height="360" rx="22" fill="url(#dots)"/>
+  <rect width="1200" height="360" rx="22" fill="url(#glow)"/>
+
+  <!-- wave logo mark, centered above the wordmark -->
+  <path d="M567 70 C 582 55, 592 85, 607 70 S 632 55, 647 70"
+        stroke="#67e8f9" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+
+  <!-- wordmark -->
+  <text x="607" y="200" text-anchor="middle"
+        font-family="'Iowan Old Style','Palatino Linotype','Palatino',Georgia,serif"
+        font-style="italic" font-weight="600" font-size="112" fill="url(#word)" letter-spacing="-1">Lethe</text>
+
+  <!-- tagline (comfortable size, clear of the waves) -->
+  <text x="600" y="250" text-anchor="middle" font-family="ui-monospace,'SF Mono','Menlo',monospace"
+        font-size="18" fill="#9fb0c8" letter-spacing="0.3">On-call memory that forgets the stale stuff.</text>
+
+  <!-- the river of Lethe: subtle waves as a floor, dissolving toward the right -->
+  <path d="M0 322 C 160 310, 320 334, 470 322 S 770 306, 990 324 S 1150 330, 1200 322"
+        stroke="url(#wave)" stroke-width="2.5" fill="none"/>
+  <path d="M0 340 C 180 330, 330 350, 500 340 S 790 324, 1010 342 S 1160 346, 1200 340"
+        stroke="url(#wave2)" stroke-width="1.8" fill="none"/>
+</svg>

@@ -1,0 +1,1 @@
+Runbook: image-resizer. If product images are loading slowly, check the image-resizer: it resizes product images before they are served. Restart the image-resizer workers to clear a backlog.

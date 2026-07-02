@@ -1,0 +1,1 @@
+Post-mortem 2024-05: a legacy-cache memory-eviction storm caused a platform-wide login outage; we flushed and resized the legacy-cache to recover.

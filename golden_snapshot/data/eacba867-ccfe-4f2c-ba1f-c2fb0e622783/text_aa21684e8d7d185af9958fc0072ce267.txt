@@ -1,0 +1,1 @@
+Runbook: payments-db. The payments-db stores transactions for the payments-service; on connection exhaustion, check the bounded pool size and long-running queries.

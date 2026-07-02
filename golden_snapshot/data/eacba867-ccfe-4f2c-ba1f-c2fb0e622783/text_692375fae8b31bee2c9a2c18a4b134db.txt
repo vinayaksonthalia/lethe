@@ -1,0 +1,1 @@
+Runbook: search-index. The search-index powers product search and is independent of login and payments.

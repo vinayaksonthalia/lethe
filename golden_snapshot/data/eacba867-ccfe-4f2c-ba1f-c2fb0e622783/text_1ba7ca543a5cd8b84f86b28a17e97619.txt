@@ -1,0 +1,1 @@
+Runbook: legacy-cache (memcached). When auth-service latency is high, the first thing to check is the legacy-cache: flush and resize the legacy-cache cluster to recover. The legacy-cache sits in front of the auth-service session reads.

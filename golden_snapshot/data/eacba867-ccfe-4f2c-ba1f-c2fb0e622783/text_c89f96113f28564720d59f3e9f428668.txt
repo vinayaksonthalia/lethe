@@ -1,0 +1,1 @@
+Runbook: rate-limiter. The rate-limiter enforces per-client quotas at the api-gateway edge; on 429 spikes, check client quota config.

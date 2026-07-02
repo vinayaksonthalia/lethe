@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: compile + hermetic tests (no keys)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        # cognee is pinned to the version the app is built against — importing
+        # app/incident_brain triggers `import cognee`, so it must be present even for
+        # the hermetic tier (the tests then mock all cognee/LLM calls). fastapi+httpx
+        # power the TestClient route tests.
+        run: |
+          python -m pip install --upgrade pip
+          pip install cognee==1.1.3 fastapi httpx pytest
+
+      - name: Byte-compile (SyntaxWarnings are errors)
+        run: python -W error::SyntaxWarning -m py_compile app.py incident_brain.py mcp_server.py
+
+      - name: Run hermetic test tier (no API keys, no real cognee)
+        # The default addopts in pytest.ini already excludes the `live` marker; we pass
+        # it explicitly so the intent is visible. No secrets are needed or used here.
+        run: pytest -m "not live"
