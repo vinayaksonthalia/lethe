@@ -307,7 +307,11 @@ That honesty is deliberate: the judging criteria reward craft and depth, not a f
 ## Honest limits (what we don't claim)
 
 - **Not "the only ones who can forget."** mem0 ships a forgetting policy too. Our defensibility is the *product*: entity-level, **verifiable**, self-hosted, workflow-wired forgetting + proactive curation.
-- **Auth is opt-in (off by default).** Locally the routes are open — correct for a 127.0.0.1 demo. Before any public deploy, set `LETHE_AUTH_TOKEN` and every API route requires `Authorization: Bearer <token>` (the web UI and MCP server attach it automatically; landing/`/app`/`/health` stay open so the page can load). It's a single shared secret, not multi-user RBAC — right-sized for a self-hosted instance, not a SaaS.
+- **Auth + rate limiting are opt-in (off by default).** Locally the routes are open — correct for a 127.0.0.1 demo. Before any public deploy, set `LETHE_AUTH_TOKEN` and every API route requires `Authorization: Bearer <token>` (the web UI and MCP server attach it automatically; landing/`/app`/`/health` stay open so the page can load), and set `LETHE_RATE_LIMIT="N/S"` to throttle the mutating/quota-spending routes (`/forget`, `/upload`, `/curation/*`, `/llm-config`) per IP. Both are single-instance guards, not multi-user RBAC — **single-tenant by design** (see below), right-sized for a self-hosted instance, not a SaaS.
+- **Single-tenant by design.** One instance per team — like early Grafana or a self-hosted Sentry. Workspaces isolate knowledge bases (each its own Cognee dataset + graph); the opt-in bearer token gates a shared deploy. Org-level accounts and RBAC are an enterprise-roadmap layer on top, not a missing bolt — the memory primitive is the product, and it's deliberately deployable as a private box before it's a SaaS.
+- **Chat threads are client-side today.** History/threads live in the browser (`localStorage`), so they're per-device, not synced. That's fine for a single operator at a terminal; server-side sessions are roadmap (and would ride on the same auth layer).
+- **Citations are provenance by name-match**, not a scored retrieval trace — they tell you *which runbooks the answer drew on*, honestly, without claiming a ranking they don't have.
+- **The benchmark is directional, not a p-value.** Three decommissions on an 18-doc corpus, blind-judged — enough to show the effect is real and surgical, not enough to call it "proven at scale." We say so.
 - **Pinned to Cognee 1.1.3.** 1.2.x's structured graph build fails with our weak local-friendly LLM (empty graph). The path forward — a tight custom `graph_model` to shrink the structured-output target — is scoped in [`learning/07`](learning/07-cognee-capability-audit.md).
 - **One soft edge:** a question about a *facet* of a system that *has* a runbook can occasionally over-point to that runbook instead of admitting the facet is undocumented. It's an LLM limit, not prompt-fixable; the demo is hero-driven so it's a documented residual, not a blocker.
 
@@ -319,8 +323,7 @@ That honesty is deliberate: the judging criteria reward craft and depth, not a f
 incident_brain.py     core loop: ingest() · ask() · forget_system() · TRIAGE_PROMPT
 app.py                FastAPI app (:8077) — landing, dashboard, all endpoints
 mcp_server.py         MCP server (stdio) — thin proxy exposing Lethe's tools
-setup.py              cold build → ledger.json   ·   reset_demo.py → restore golden (instant)
-scripts/              dev utilities & tests (verify_clean · smoke_web · qa_harness · capture_screens · try_mcp)
+scripts/              setup.py (cold build → ledger.json) · reset_demo.py (restore golden, instant) · dev tools (verify_clean · smoke_web · qa_harness · capture_screens · try_mcp)
 research/             one-off experiments & evidence (RAG-vs-graph · forget validation · feedback probes)
 learning/             the whole project explained twice over (kid + judge), with flowcharts
   ├─ 00–05            big picture · how-it-works · cognee deep-dive · stack · Q&A · research story
@@ -337,6 +340,8 @@ The `learning/` folder isn't an afterthought — it's verified against the runni
 
 - **Deploy it** (a live URL beats "clone and run"). The shared-secret auth gate is **already built** (`LETHE_AUTH_TOKEN`, opt-in) — remaining: a Docker image + a deployment guide (which would also close [cognee-integrations#89](https://github.com/topoteretes/cognee-integrations/issues/89)).
 - **De-risk the Cognee 1.2.x upgrade** behind a tight custom `graph_model` (also cleans up extracted entities).
+- **Enterprise layer** — org accounts + RBAC and server-side chat sessions on top of the existing auth gate (turns single-tenant boxes into a managed multi-team deployment).
+- **Split `app.py` into modules** (routes / views / templates) post-hackathon — it's one file today for a reason (zero-config, one-command run), but it's the obvious next refactor.
 - **Submission assets** — a <90s demo video built on the same-question-flip, and a blog ("I tested 3 Cognee differentiators at temp 0 — only `forget` held").
 
 ---

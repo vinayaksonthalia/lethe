@@ -4,7 +4,8 @@ Run:  ./.venv/bin/python -m uvicorn app:app --port 8077   (then open http://loca
 Dashboard: Triage (chat) · Systems (per-system decommission/forget) · Upload (add your own docs).
 Startup LOADS the prebuilt ledger (instant). Upload ingests new docs in the background.
 """
-import os, re, json, asyncio, datetime, logging, socket, ipaddress, hmac, hashlib
+import os, re, json, asyncio, datetime, logging, socket, ipaddress, hmac, hashlib, time
+from collections import deque
 from urllib.parse import urlparse
 import incident_brain as ib  # sets CACHING=false BEFORE importing cognee; reuses ingest/ask/forget
 import cognee
@@ -62,6 +63,35 @@ async def _auth_gate(request: Request, call_next):
             return JSONResponse(
                 {"detail": "This Lethe instance is not configured for remote access. "
                            "Set LETHE_AUTH_TOKEN to allow non-local access."}, status_code=403)
+    return await call_next(request)
+
+# Optional per-IP rate limit — OFF by default (local demo unaffected). Set LETHE_RATE_LIMIT="N/S"
+# (N requests per S seconds) before a public deploy to throttle the mutating/quota-spending routes.
+def _parse_rate(s):
+    try:
+        n, w = s.strip().split("/"); n, w = int(n), float(w)
+        return (n, w) if n > 0 and w > 0 else None
+    except Exception:
+        return None
+_RATE = _parse_rate(os.environ.get("LETHE_RATE_LIMIT", ""))
+_RATE_PATHS = ("/forget", "/upload", "/curation/cycle", "/curation/restore", "/curation/review", "/llm-config")
+_rate_hits = {}  # ip -> deque[monotonic timestamps]
+
+@app.middleware("http")
+async def _rate_limit(request: Request, call_next):
+    if _RATE is not None and request.method == "POST" and any(request.url.path.startswith(p) for p in _RATE_PATHS):
+        limit, window = _RATE
+        ip = request.client.host if request.client else "?"
+        now = time.monotonic()
+        dq = _rate_hits.setdefault(ip, deque())
+        while dq and now - dq[0] > window:
+            dq.popleft()
+        if len(dq) >= limit:
+            return JSONResponse({"error": "rate limited — try again shortly"}, status_code=429)
+        dq.append(now)
+        if len(_rate_hits) > 4096:  # bound memory: drop IPs with no live hits
+            for k in [k for k, v in _rate_hits.items() if not v]:
+                _rate_hits.pop(k, None)
     return await call_next(request)
 
 @app.middleware("http")
@@ -849,7 +879,7 @@ def _cert_html(cert):
   table.record th{text-align:left;font-weight:500;color:var(--muted);font-size:12.5px;padding:9px 0;width:38%;vertical-align:top;border-bottom:1px solid var(--line)}
   table.record td{text-align:left;font-size:13.5px;padding:9px 0;border-bottom:1px solid var(--line);vertical-align:top}
   .metrics{display:flex;gap:14px}
-  .metric{flex:1;border:1px solid var(--line);border-radius:5px;padding:18px 10px;text-align:center;background:var(--wash)}
+  .metric{flex:1;border:1px solid var(--line);border-radius:5px;padding:18px 10px;text-align:center;background:#f6f8fc}
   .metric-n{font-family:'Geist Mono',monospace;font-size:30px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
   .metric-l{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:5px}
   .metric-empty{flex:1;border:1px dashed var(--line2);border-radius:5px;padding:16px;text-align:center;color:var(--faint);font-size:12.5px}
@@ -1492,6 +1522,20 @@ PAGE = """<!doctype html>
           <button id="newChat" class="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-white"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New chat</button>
           <div id="threadMenu" class="absolute left-0 top-10 z-30 hidden max-h-80 w-80 overflow-y-auto rounded-xl border border-zinc-300 bg-white p-1.5 shadow-xl dark:border-zinc-800 dark:bg-[#1a2233]"></div>
         </div>
+        <div id="demoCard" class="hidden shrink-0 mb-3 rounded-xl border border-cyan-300/60 bg-cyan-50/40 p-4 dark:border-cyan-800/40 dark:bg-cyan-950/15">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="mono text-[10px] uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-400">start here</div>
+              <h3 class="serif mt-0.5 text-xl tracking-tight">The 60-second demo</h3>
+            </div>
+            <button id="demoCardX" aria-label="Dismiss" class="-mr-1 -mt-1 shrink-0 rounded p-1 text-zinc-400 transition hover:text-zinc-600 dark:hover:text-zinc-200"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <ol class="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
+            <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">1</span><span><button id="demoStep1" class="text-left font-medium text-cyan-700 underline decoration-dotted underline-offset-2 transition hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300">Ask: &ldquo;If auth-service latency is high, what should I check?&rdquo;</button></span></li>
+            <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">2</span><span>Then <button id="demoStep2" class="font-medium text-cyan-700 underline decoration-dotted underline-offset-2 transition hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300">decommission <span class="mono">legacy-cache</span> in Systems</button> &mdash; watch the removal receipt.</span></li>
+            <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">3</span><span>Ask the <b class="font-semibold text-zinc-700 dark:text-zinc-200">exact same question</b> again &mdash; watch the answer flip to the live system.</span></li>
+          </ol>
+        </div>
         <div id="log" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation" class="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto rounded-xl border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-[#141b2b]"></div>
         <div class="mt-3 flex shrink-0 items-end gap-2 rounded-2xl border border-zinc-300 bg-white p-1.5 pl-3.5 shadow-sm transition focus-within:border-cyan-500 focus-within:shadow-md focus-within:shadow-cyan-500/10 dark:border-zinc-800 dark:bg-[#141b2b]">
           <textarea id="q" rows="1" placeholder="Ask anything about your incidents…" class="max-h-40 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500"></textarea>
@@ -1500,7 +1544,7 @@ PAGE = """<!doctype html>
       </section>
 
       <section data-view="systems" class="hidden min-h-0 flex-1 overflow-y-auto py-8">
-        <div class="flex items-end justify-between gap-3">
+        <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div><h2 class="serif text-2xl tracking-tight">Systems</h2>
           <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">Everything in the knowledge base. Decommission one and it's hard-deleted from the graph + vectors.</p></div>
           <button id="addSysBtn" class="shrink-0 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"><span class="mr-1 text-cyan-500">+</span>Add system</button>
@@ -1510,7 +1554,8 @@ PAGE = """<!doctype html>
 
       <section data-view="upload" class="hidden min-h-0 flex-1 overflow-y-auto py-8">
         <div><h2 class="serif text-2xl tracking-tight">Upload</h2>
-        <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">Feed your own runbooks, post-mortems or notes. They're parsed into the knowledge graph.</p></div>
+        <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">Feed your own runbooks, post-mortems or notes. They're parsed into the knowledge graph.</p>
+        <p class="mt-2 max-w-2xl text-xs text-zinc-400 dark:text-zinc-500">Ingestion runs a real <span class="mono">cognify</span> pass — about a minute, and it uses your LLM key. The default <span class="font-medium">Incidents</span> workspace is read-only to protect the demo data; create a workspace to ingest into.</p></div>
         <label id="drop" class="mt-5 block cursor-pointer rounded-xl border border-dashed border-zinc-300 bg-white p-10 text-center transition hover:border-zinc-400 dark:border-zinc-700 dark:bg-[#141b2b] dark:hover:border-zinc-600">
           <input id="file" type="file" accept=".txt,.md,.markdown,.json,.csv,.log" multiple class="hidden">
           <svg class="mx-auto mb-2 text-zinc-400" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
@@ -1589,6 +1634,13 @@ PAGE = """<!doctype html>
       <section data-view="timeline" class="hidden min-h-0 flex-1 overflow-y-auto py-8">
         <div><h2 class="serif text-2xl tracking-tight">Timeline</h2>
         <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">A durable audit log of what this memory has learned and forgotten — and when. Every decommission lands here with its verifiable removal receipt. <span class="font-medium text-emerald-600 dark:text-emerald-400">Free · 0 tokens</span></p></div>
+        <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-zinc-400"></span>reviewed</span>
+          <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-400"></span>demoted <span class="text-zinc-400">· reversible</span></span>
+          <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-cyan-400"></span>restored / self-healed</span>
+          <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-red-500"></span>forgotten <span class="text-zinc-400">· with removal receipt</span></span>
+        </div>
+        <p class="mt-2 text-xs text-zinc-400 dark:text-zinc-500">Run a curation cycle or decommission a system and the coloured receipts land here.</p>
         <div id="tlBody" class="mt-5"></div>
       </section>
 
@@ -1597,11 +1649,12 @@ PAGE = """<!doctype html>
 </div>
 
 <div id="wsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-  <div class="w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#141b2b]">
+  <div class="w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-500"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg><h3 class="text-base font-semibold tracking-tight">New workspace</h3></div>
     <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">A separate knowledge base with its own graph — isolated from your other workspaces.</p>
-    <input id="wsModalInput" maxlength="40" placeholder="e.g. API docs, Onboarding, Vendor configs" class="mt-4 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm outline-none placeholder:text-zinc-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/25 dark:border-zinc-800 dark:bg-[#0e1422] dark:placeholder:text-zinc-500">
-    <div class="mt-4 flex justify-end gap-2">
+    <input id="wsModalInput" maxlength="40" placeholder="e.g. API docs, Onboarding, Vendor configs" class="mt-4 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm outline-none placeholder:text-zinc-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/25 dark:border-zinc-800 dark:bg-[#141b2b] dark:placeholder:text-zinc-500">
+    <div id="wsModalMsg" class="mt-2 min-h-[1rem] text-xs"></div>
+    <div class="mt-3 flex justify-end gap-2">
       <button id="wsModalCancel" class="rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900">Cancel</button>
       <button id="wsModalOk" class="rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Create workspace</button>
     </div>
@@ -1612,7 +1665,8 @@ PAGE = """<!doctype html>
   <div class="w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div class="flex items-center gap-2.5"><span class="grid h-9 w-9 place-items-center rounded-full border border-red-300 bg-red-50 text-red-600 dark:border-red-800/70 dark:bg-red-950/30 dark:text-red-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span><h3 class="text-base font-semibold tracking-tight">Delete workspace?</h3></div>
     <p class="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">This permanently <b class="font-medium text-zinc-700 dark:text-zinc-200">hard-deletes</b> <span id="wsDelName" class="mono text-zinc-700 dark:text-zinc-200"></span> and all of its knowledge — graph and vectors. This can't be undone.</p>
-    <div class="mt-5 flex justify-end gap-2">
+    <div id="wsDelMsg" class="mt-2 min-h-[1rem] text-xs"></div>
+    <div class="mt-4 flex justify-end gap-2">
       <button id="wsDelCancel" class="rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900">Cancel</button>
       <button id="wsDelOk" class="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700">Delete</button>
     </div>
@@ -1632,7 +1686,7 @@ PAGE = """<!doctype html>
     <div class="mt-4 space-y-3">
       <div><label class="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">Provider</label>
         <select id="setProvider" class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 dark:border-zinc-800 dark:bg-[#141b2b]">
-          <option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google (Gemini)</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="ollama">Ollama (local · no key)</option><option value="custom">Custom (OpenAI-compatible)</option>
+          <option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google (Gemini)</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="lmstudio">LM Studio (local · no key)</option><option value="ollama">Ollama (local · no key)</option><option value="custom">Custom (OpenAI-compatible)</option>
         </select></div>
       <div><label class="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">API key</label>
         <input id="setKey" type="password" autocomplete="off" placeholder="sk-…" class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-cyan-500 dark:border-zinc-800 dark:bg-[#141b2b] dark:placeholder:text-zinc-500"></div>
@@ -1705,6 +1759,15 @@ PAGE = """<!doctype html>
  }
  document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>show(b.dataset.view));
  show('triage');
+
+ // First-run guided-demo card (Triage): shows once on the default workspace until dismissed.
+ function demoCardUpd(){const dc=$('demoCard');if(!dc)return;const shouldShow=localStorage.getItem('lethe.demoCard')!=='done'&&activeWs==='incidents';dc.classList.toggle('hidden',!shouldShow);}
+ (function(){const dc=$('demoCard');if(!dc)return;
+   $('demoCardX').onclick=()=>{localStorage.setItem('lethe.demoCard','done');dc.classList.add('hidden');};
+   $('demoStep1').onclick=()=>{show('triage');ask('If auth-service latency is high, what should I check?');};
+   $('demoStep2').onclick=()=>show('systems');
+   demoCardUpd();
+ })();
 
  function setDot(text,kind){$('dotxt').textContent=text;$('dot').className='h-2 w-2 rounded-full '+(kind==='ok'?'bg-emerald-500':kind==='err'?'bg-red-500':'bg-amber-500');}
  async function poll(){try{const h=await(await fetch('/health')).json();
@@ -1841,22 +1904,27 @@ PAGE = """<!doctype html>
    const sep=document.createElement('div');sep.className='my-1 border-t border-zinc-300 dark:border-zinc-800';m.appendChild(sep);
    const nw=document.createElement('button');nw.className='flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400';nw.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New workspace';nw.onclick=createWs;m.appendChild(nw);}
  let wsDelPending=null;
- function delWs(id,name){wsDelPending={id:id,name:name};$('wsDelName').textContent=name;$('wsMenu').classList.add('hidden');const m=$('wsDelModal');m.classList.remove('hidden');m.classList.add('flex');}
+ function delWs(id,name){wsDelPending={id:id,name:name};$('wsDelName').textContent=name;const dm=$('wsDelMsg');if(dm)dm.textContent='';$('wsDelOk').disabled=false;$('wsMenu').classList.add('hidden');const m=$('wsDelModal');m.classList.remove('hidden');m.classList.add('flex');}
  function closeWsDel(){const m=$('wsDelModal');m.classList.add('hidden');m.classList.remove('flex');wsDelPending=null;}
- async function doDelWs(){if(!wsDelPending)return;const id=wsDelPending.id;closeWsDel();
-   try{const j=await(await fetch('/workspaces/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})).json();
-     if(!j.ok)return;
+ async function doDelWs(){if(!wsDelPending)return;const id=wsDelPending.id;const msg=$('wsDelMsg');if(msg)msg.textContent='';$('wsDelOk').disabled=true;
+   try{const r=await fetch('/workspaces/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});const j=await r.json();
+     if(!r.ok||!j.ok){if(msg)msg.innerHTML='<span class="text-red-500">'+esc(j.error||'Could not delete the workspace.')+'</span>';$('wsDelOk').disabled=false;return;}
+     closeWsDel();
      wsList=wsList.filter(w=>w.id!==id);
      if(activeWs===id){activeWs='incidents';localStorage.setItem('lethe.ws','incidents');ctxSysCount=null;loadThreads();renderBar();renderLog();loadCtxCount();}
      renderWsName();renderWsMenu();if(curView==='systems')loadSystems();if(curView==='graph')loadGraph();
-   }catch(e){}
+   }catch(e){if(msg)msg.innerHTML='<span class="text-red-500">Request failed — is the server running?</span>';$('wsDelOk').disabled=false;}
  }
  (function(){const ok=$('wsDelOk'),ca=$('wsDelCancel'),m=$('wsDelModal');if(ok)ok.onclick=doDelWs;if(ca)ca.onclick=closeWsDel;if(m)m.addEventListener('click',e=>{if(e.target===m)closeWsDel();});})();
- function switchWs(id){activeWs=id;localStorage.setItem('lethe.ws',id);$('wsMenu').classList.add('hidden');ctxSysCount=null;renderWsName();loadCtxCount();loadThreads();renderBar();renderLog();if(curView==='systems')loadSystems();if(curView==='graph')loadGraph();if(curView==='timeline')loadTimeline();}
- function createWs(){$('wsMenu').classList.add('hidden');$('wsModalInput').value='';const m=$('wsModal');m.classList.remove('hidden');m.classList.add('flex');setTimeout(()=>$('wsModalInput').focus(),40);}
+ function switchWs(id){activeWs=id;localStorage.setItem('lethe.ws',id);$('wsMenu').classList.add('hidden');ctxSysCount=null;renderWsName();loadCtxCount();loadThreads();renderBar();renderLog();demoCardUpd();if(curView==='systems')loadSystems();if(curView==='graph')loadGraph();if(curView==='timeline')loadTimeline();}
+ function createWs(){$('wsMenu').classList.add('hidden');$('wsModalInput').value='';const cm=$('wsModalMsg');if(cm)cm.textContent='';$('wsModalOk').disabled=false;const m=$('wsModal');m.classList.remove('hidden');m.classList.add('flex');setTimeout(()=>$('wsModalInput').focus(),40);}
  function closeWsModal(){const m=$('wsModal');m.classList.add('hidden');m.classList.remove('flex');}
- async function doCreateWs(){const name=($('wsModalInput').value||'').trim();if(!name)return;closeWsModal();
-   try{const j=await(await fetch('/workspaces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})})).json();if(j.workspace){wsList.push(j.workspace);switchWs(j.workspace.id);}}catch(e){}}
+ async function doCreateWs(){const name=($('wsModalInput').value||'').trim();if(!name)return;const msg=$('wsModalMsg');if(msg)msg.textContent='';$('wsModalOk').disabled=true;
+   try{const r=await fetch('/workspaces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})});const j=await r.json();
+     if(r.ok&&j.workspace){wsList.push(j.workspace);closeWsModal();switchWs(j.workspace.id);}
+     else{if(msg)msg.innerHTML='<span class="text-red-500">'+esc(j.error||'Could not create the workspace.')+'</span>';}
+   }catch(e){if(msg)msg.innerHTML='<span class="text-red-500">Request failed — is the server running?</span>';}
+   $('wsModalOk').disabled=false;}
  $('wsModalOk').onclick=doCreateWs;$('wsModalCancel').onclick=closeWsModal;
  $('wsModalInput').addEventListener('keydown',e=>{if(e.key==='Enter')doCreateWs();else if(e.key==='Escape')closeWsModal();});
  $('wsModal').addEventListener('click',e=>{if(e.target===$('wsModal'))closeWsModal();});
@@ -1884,7 +1952,7 @@ PAGE = """<!doctype html>
        if(s.age_days!=null){const ago=s.age_days>=365?(s.age_days/365).toFixed(1)+'y':s.age_days+'d';meta+=' · reviewed '+ago+' ago';if(overdue)badge=' <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">overdue</span>';}
        const markBtn=overdue?'<button data-sys="'+esc(s.name)+'" class="shrink-0 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40">Mark reviewed</button>':'';
        card.innerHTML='<div class="min-w-0"><div class="mono text-sm font-medium">'+esc(s.name)+'</div><div class="mt-0.5 text-xs text-zinc-400">'+meta+badge+'</div></div>'+
-         '<div class="flex flex-wrap items-center justify-end gap-2">'+markBtn+'<button class="decom rounded-full border border-red-300 bg-red-50/50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50 dark:border-red-800/70 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40">Decommission</button></div>';
+         '<div class="flex flex-wrap items-center justify-end gap-2">'+markBtn+'<button class="decom shrink-0 rounded-lg border border-zinc-300 bg-transparent px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:border-red-400 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-red-800/70 dark:hover:bg-red-950/30 dark:hover:text-red-400">Decommission</button></div>';
        card.querySelector('.decom').onclick=()=>forgetFlow(s.name,card);
        const mb=card.querySelector('[data-sys]');if(mb)mb.onclick=()=>markReviewed(mb);
        g.appendChild(card);
@@ -2287,19 +2355,35 @@ PAGE = """<!doctype html>
      gemini:{model:'openai/gemini-2.5-flash',endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/',key:true},
      openrouter:{model:'openrouter/meta-llama/llama-3.3-70b-instruct',endpoint:'https://openrouter.ai/api/v1',key:true},
      groq:{model:'llama-3.3-70b-versatile',endpoint:'https://api.groq.com/openai/v1',key:true},
+     lmstudio:{model:'openai/your-model-id',endpoint:'http://localhost:1234/v1',key:false},
      ollama:{model:'qwen2.5',endpoint:'http://localhost:11434',key:false},
      custom:{model:'',endpoint:'',key:true}
    };
-   const PROVIDER_MAP={openai:'openai',anthropic:'anthropic',gemini:'custom',openrouter:'custom',groq:'custom',ollama:'ollama',custom:'custom'};
+   const PROVIDER_MAP={openai:'openai',anthropic:'anthropic',gemini:'custom',openrouter:'custom',groq:'custom',lmstudio:'custom',ollama:'ollama',custom:'custom'};
+   // The backend collapses gemini/groq/openrouter/lmstudio to provider 'custom' — map a running config back to a dropdown value by endpoint.
+   function detect(cfg){const ep=(cfg.endpoint||'').toLowerCase();const pv=(cfg.provider||'').toLowerCase();
+     if(ep.indexOf('generativelanguage.googleapis')>=0)return'gemini';
+     if(ep.indexOf('api.groq.com')>=0)return'groq';
+     if(ep.indexOf('openrouter.ai')>=0)return'openrouter';
+     if(ep.indexOf(':1234')>=0)return'lmstudio';
+     if(pv==='ollama'||ep.indexOf(':11434')>=0)return'ollama';
+     if(pv==='anthropic')return'anthropic';
+     if(pv==='openai'&&!ep)return'openai';
+     return'custom';}
    function fill(p){const d=PRESETS[p]||PRESETS.custom;$('setModelInput').value=d.model;$('setEndpoint').value=d.endpoint;$('setKey').placeholder=d.key?'sk-…':'(no key needed)';}
    $('setProvider').onchange=()=>fill($('setProvider').value);
-   function open(){$('setMsg').textContent='';$('setKey').value='';m.classList.remove('hidden');m.classList.add('flex');setTimeout(()=>$('setProvider').focus(),40);}
+   async function open(){$('setMsg').textContent='';$('setKey').value='';m.classList.remove('hidden');m.classList.add('flex');
+     fill('groq');$('setProvider').value='groq';  // safe fallback (never default to OpenAI, which we don't demo)
+     try{const cfg=await(await fetch('/llm-config')).json();const p=detect(cfg);$('setProvider').value=p;fill(p);
+       if(cfg.model)$('setModelInput').value=cfg.model;if(cfg.endpoint)$('setEndpoint').value=cfg.endpoint;}catch(e){}
+     setTimeout(()=>$('setProvider').focus(),40);}
    function close(){m.classList.add('hidden');m.classList.remove('flex');}
    $('setBtn').onclick=open;$('setCancel').onclick=close;
    m.addEventListener('click',e=>{if(e.target===m)close();});
    $('setSave').onclick=async()=>{
      const p=$('setProvider').value;
-     const body={provider:PROVIDER_MAP[p]||'custom',model:$('setModelInput').value.trim(),endpoint:$('setEndpoint').value.trim(),api_key:$('setKey').value.trim()};
+     const keyVal=$('setKey').value.trim()||(p==='lmstudio'?'lm-studio':'');  // LM Studio ignores the key but litellm wants a non-empty one
+     const body={provider:PROVIDER_MAP[p]||'custom',model:$('setModelInput').value.trim(),endpoint:$('setEndpoint').value.trim(),api_key:keyVal};
      $('setMsg').innerHTML='<span class="text-zinc-500">applying &amp; testing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>';$('setSave').disabled=true;
      try{const j=await(await fetch('/llm-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
        if(j.ok){$('setMsg').innerHTML='<span class="text-emerald-600 dark:text-emerald-400">Saved — now answering with '+esc(j.llm.label)+'.</span>';poll();setTimeout(close,950);}
@@ -2311,7 +2395,7 @@ PAGE = """<!doctype html>
      try{await(await fetch('/llm-config/reset',{method:'POST'})).json();$('setMsg').innerHTML='<span class="text-emerald-600 dark:text-emerald-400">Back to the default model.</span>';$('setKey').value='';poll();}
      catch(e){$('setMsg').innerHTML='<span class="text-red-500">reset failed</span>';}
    };
-   fill('openai');
+   fill('groq');  // harmless initial state; open() re-fills from the active config
  })();
 
  // Add system — name + content -> ingest into the active workspace (reuses /upload). Re-adding a
