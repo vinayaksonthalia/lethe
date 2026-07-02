@@ -1,0 +1,69 @@
+{
+  "llm_model": "gemma4:31b-cloud",
+  "default": {
+    "n_nodes": 61,
+    "n_edges": 98,
+    "entities": [
+      "5xx spikes",
+      "api gateway",
+      "auth-service",
+      "backend services",
+      "bounded connection pool",
+      "core-platform team",
+      "discovery team",
+      "legacy cache",
+      "login",
+      "login system",
+      "may 2024",
+      "memory eviction storm",
+      "payments",
+      "payments database",
+      "payments team",
+      "payments-service",
+      "platform-wide login outage",
+      "primary session store",
+      "product search",
+      "rate limits",
+      "recent deploys",
+      "search-index",
+      "storefront traffic",
+      "upstream health"
+    ],
+    "types": [
+      "connection pool",
+      "data store",
+      "database",
+      "date",
+      "deploy",
+      "error",
+      "event",
+      "feature",
+      "health",
+      "limit",
+      "service",
+      "services",
+      "system",
+      "system component",
+      "team",
+      "traffic"
+    ]
+  },
+  "custom": {
+    "n_nodes": 0,
+    "n_edges": 0,
+    "entities": [],
+    "types": []
+  },
+  "custom_build_ok": true,
+  "custom_build_error": null,
+  "canonical_types": [
+    "Action",
+    "Concept",
+    "DataStore",
+    "Incident",
+    "Signal",
+    "System",
+    "Team"
+  ],
+  "off_vocab": []
+}

@@ -1,0 +1,155 @@
+{
+  "generated_at": "2026-06-26T10:14:58",
+  "decommissioned_system": "legacy-cache",
+  "docs_forgotten": 2,
+  "graph": {
+    "nodes_before": 65,
+    "nodes_after": 51,
+    "nodes_removed": 14,
+    "edges_before": 104,
+    "edges_after": 78,
+    "edges_removed": 26
+  },
+  "stale_sensitive": {
+    "total": 4,
+    "leaked_before": 4,
+    "leaked_after": 0,
+    "correct_before": 0,
+    "correct_after": 4
+  },
+  "control": {
+    "total": 4,
+    "correct_before": 4,
+    "correct_after": 4
+  },
+  "before": {
+    "stale": [
+      {
+        "q": "If auth-service latency is high, what should I check, and what's in the auth read path?",
+        "answer": "Check the legacy-cache and flush and resize the legacy-cache cluster to recover, the auth read path includes the legacy-cache which sits in front of the auth-service session reads and the auth-service reads session state from the primary session store.",
+        "leak": true
+      },
+      {
+        "q": "How do we recover from a sudden auth-service latency spike?",
+        "answer": "To recover from a sudden auth-service latency spike, check the legacy-cache and flush and resize the legacy-cache cluster.",
+        "leak": true
+      },
+      {
+        "q": "What sits in front of the auth-service session reads?",
+        "answer": "The legacy cache sits in front of the auth-service session reads.",
+        "leak": true
+      },
+      {
+        "q": "What caused the platform-wide login outage described in the post-mortem?",
+        "answer": "A legacy-cache memory-eviction storm",
+        "leak": true
+      }
+    ],
+    "control": [
+      {
+        "q": "Who owns the payments-service?",
+        "answer": "The payments-team owns the payments-service.",
+        "ok": true,
+        "expects": [
+          "payments team",
+          "payments"
+        ]
+      },
+      {
+        "q": "What must the payments-service call to validate a login token?",
+        "answer": "To validate a login token, the payments-service must call the auth-service.",
+        "ok": true,
+        "expects": [
+          "auth-service",
+          "auth service"
+        ]
+      },
+      {
+        "q": "What powers product search?",
+        "answer": "The search-index powers product search",
+        "ok": true,
+        "expects": [
+          "search-index",
+          "search index"
+        ]
+      },
+      {
+        "q": "What does the api-gateway do?",
+        "answer": "The api-gateway routes all storefront traffic to backend services and enforces rate limits.",
+        "ok": true,
+        "expects": [
+          "api-gateway",
+          "rate limit",
+          "storefront",
+          "traffic",
+          "route"
+        ]
+      }
+    ]
+  },
+  "after": {
+    "stale": [
+      {
+        "q": "If auth-service latency is high, what should I check, and what's in the auth read path?",
+        "answer": "Check the primary session store, as the auth-service reads session state from it, and verify the login-token validation process, because high latency in the auth-service may be caused by issues in these areas.",
+        "leak": false
+      },
+      {
+        "q": "How do we recover from a sudden auth-service latency spike?",
+        "answer": "To recover from a sudden auth-service latency spike, check recent deploys for any recently deployed changes to the system, and verify the auth-service's connection to the primary session store, as it reads session state from there.",
+        "leak": false
+      },
+      {
+        "q": "What sits in front of the auth-service session reads?",
+        "answer": "The api-gateway sits in front of the auth-service session reads.",
+        "leak": false
+      },
+      {
+        "q": "What caused the platform-wide login outage described in the post-mortem?",
+        "answer": "The cause of the platform-wide login outage is not documented in the runbooks.",
+        "leak": false
+      }
+    ],
+    "control": [
+      {
+        "q": "Who owns the payments-service?",
+        "answer": "The payments-team owns the payments-service.",
+        "ok": true,
+        "expects": [
+          "payments team",
+          "payments"
+        ]
+      },
+      {
+        "q": "What must the payments-service call to validate a login token?",
+        "answer": "The payments-service must call the auth-service to validate a login token.",
+        "ok": true,
+        "expects": [
+          "auth-service",
+          "auth service"
+        ]
+      },
+      {
+        "q": "What powers product search?",
+        "answer": "The search-index powers product search",
+        "ok": true,
+        "expects": [
+          "search-index",
+          "search index"
+        ]
+      },
+      {
+        "q": "What does the api-gateway do?",
+        "answer": "The api-gateway routes all storefront traffic to backend services and enforces rate limits.",
+        "ok": true,
+        "expects": [
+          "api-gateway",
+          "rate limit",
+          "storefront",
+          "traffic",
+          "route"
+        ]
+      }
+    ]
+  }
+}

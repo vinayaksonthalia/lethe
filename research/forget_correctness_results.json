@@ -1,0 +1,225 @@
+{
+  "generated_at": "2026-06-28T14:01:19",
+  "system_model": "openai/meta/llama-3.3-70b-instruct",
+  "judge_model": "gemini-2.5-flash",
+  "corpus_docs": 18,
+  "systems": 17,
+  "decommissioned": [
+    "legacy-cache",
+    "email-relay",
+    "image-resizer"
+  ],
+  "docs_forgotten": 4,
+  "stale_correctness_before": 1.0,
+  "stale_correctness_after": 2.0,
+  "control_correctness_before": 2.0,
+  "control_correctness_after": 2.0,
+  "abstention_correctness_before": 0.0,
+  "abstention_correctness_after": 0.6666666666666666,
+  "retrieval_proof": [
+    {
+      "system": "legacy-cache",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "email-relay",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "image-resizer",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    }
+  ],
+  "retrieval_proof_pass": true,
+  "before": [
+    {
+      "q": "The auth-service latency is high \u2014 what should I check first?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "To address the high auth-service latency, first check the legacy-cache by flushing and resizing the legacy-cache cluster, as it sits in front of the auth-service session reads and can help recover when auth-service latency is high.",
+      "score": 0
+    },
+    {
+      "q": "Customer notification emails are failing to send \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "To troubleshoot the issue of customer notification emails failing to send, check the cloud-mailer status and the notification queue depth, as the notification-service delivers all email through the cloud-mailer and these are the first points of failure to investigate according to the runbook for the notification-service.",
+      "score": 2
+    },
+    {
+      "q": "Product images are loading slowly on the storefront \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "To address the issue of product images loading slowly on the storefront, check the image-resizer service as it resizes product images before they are served. Restarting the image-resizer workers can help clear a backlog and resolve slow image loading. Additionally, consider checking the cdn-transform edge workers and their queue, as well as the origin health on cache-miss storms, to ensure all components involved in image loading are functioning properly.",
+      "score": 2
+    },
+    {
+      "q": "What is in the auth-service read path for session state?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "To determine what is in the auth-service read path for session state, check the session-store, as the auth-service reads session state directly from it. If auth-service latency is high, also check the session-store connection pool and its hit rate, as well as the legacy-cache, which sits in front of the auth-service session reads.",
+      "score": 1
+    },
+    {
+      "q": "How does the platform deliver outgoing customer email?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "The platform delivers outgoing customer email through the notification-service, which sends emails through the cloud-mailer. To troubleshoot email delivery issues, check the cloud-mailer status and the notification queue depth. Alternatively, the email-relay daemon handles all outgoing platform email, so restarting it and clearing its outbound spool may also resolve issues.",
+      "score": 0
+    },
+    {
+      "q": "What service resizes and optimizes product images?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "Check the cdn-transform service, as it resizes and optimizes product images at the edge for the cdn, and also check the image-resizer service, which resizes product images before they are served.",
+      "score": 1
+    },
+    {
+      "q": "Who owns the payments-service?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The payments team owns the payments-service, check the team assignments in the Ownership documentation and the connections between teams and services for confirmation.",
+      "score": 2
+    },
+    {
+      "q": "What must the payments-service call to validate a login token?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The payments-service must call the auth-service to validate a login token, as the auth-service is responsible for validating login tokens and is required by the payments-service.",
+      "score": 2
+    },
+    {
+      "q": "What powers product search?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The search-index powers product search, check the search-index system and its independence from login and payments to understand its functionality.",
+      "score": 2
+    },
+    {
+      "q": "What does the api-gateway do?",
+      "kind": "control",
+      "trap": null,
+      "answer": "To troubleshoot the api-gateway, check that it is routing storefront traffic to backend services and enforcing rate limits, and on 5xx spikes, check upstream health and recent deploys.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the legacy-cache system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "legacy-cache",
+      "answer": "The legacy-cache system is a cache system using memcached that sits in front of the auth-service session reads. To troubleshoot it, check for high auth-service latency and flush and resize the legacy-cache cluster to recover, as a memory-eviction storm in the legacy-cache can cause a platform-wide login outage.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the email-relay system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "email-relay",
+      "answer": "The email-relay system handles all outgoing platform email. To troubleshoot issues with it, check the email-relay daemon and restart it if necessary, also clear its outbound spool, as this resolves notification sending failures.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the image-resizer system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "image-resizer",
+      "answer": "The image-resizer system is a service that resizes product images before they are served. To troubleshoot issues with it, check if product images are loading slowly and restart the image-resizer workers to clear a backlog.",
+      "score": 0
+    }
+  ],
+  "after": [
+    {
+      "q": "The auth-service latency is high \u2014 what should I check first?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "Check the session-store connection pool and its hit rate, as the session-store connection pool and hit rate impact auth-service latency.",
+      "score": 2
+    },
+    {
+      "q": "Customer notification emails are failing to send \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "Check the cloud-mailer status and the notification queue depth to troubleshoot the issue with customer notification emails failing to send, as the notification-service delivers all email through the cloud-mailer.",
+      "score": 2
+    },
+    {
+      "q": "Product images are loading slowly on the storefront \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "To address the issue of product images loading slowly on the storefront, check the cdn-transform edge workers and their queue, as well as the origin health of the cdn, because the cdn-transform service resizes and optimizes product images at the edge for the cdn and the cdn serves all static assets and product images to the storefront.",
+      "score": 2
+    },
+    {
+      "q": "What is in the auth-service read path for session state?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "The auth-service reads session state directly from the session-store, which is the primary store for user session state, so check the session-store connection pool and its hit rate if auth-service latency is high.",
+      "score": 2
+    },
+    {
+      "q": "How does the platform deliver outgoing customer email?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "The platform delivers outgoing customer email through the notification-service, which sends all emails through the cloud-mailer. To troubleshoot delivery failures, check the cloud-mailer status and the notification queue depth, as well as the cloud-mailer's API status page and bounce rate.",
+      "score": 2
+    },
+    {
+      "q": "What service resizes and optimizes product images?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "Check the cdn-transform service, as it resizes and optimizes product images at the edge for the cdn.",
+      "score": 2
+    },
+    {
+      "q": "Who owns the payments-service?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The payments-service is owned by the payments team, check the Ownership documentation and team assignments for more information.",
+      "score": 2
+    },
+    {
+      "q": "What must the payments-service call to validate a login token?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The payments-service must call the auth-service to validate a login token, as the auth-service is responsible for validating login tokens and is required by the payments-service.",
+      "score": 2
+    },
+    {
+      "q": "What powers product search?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Check the search-index system, as it powers product search and is independent of login and payments.",
+      "score": 2,
+      "note": "re-asked: original AFTER ask timed out on NVIDIA rate-limit (infra, not a forget regression)"
+    },
+    {
+      "q": "What does the api-gateway do?",
+      "kind": "control",
+      "trap": null,
+      "answer": "To troubleshoot the api-gateway, check that it is routing storefront traffic to backend services and enforcing rate limits, and on 5xx spikes, check upstream health and recent deploys.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the legacy-cache system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "legacy-cache",
+      "answer": "The legacy-cache system is not documented in the runbooks. You should check the provided runbooks for information on other systems such as the cdn, session-store, payments-db, and monitoring stack, but there is no specific information on the legacy-cache system.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the email-relay system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "email-relay",
+      "answer": "The email-relay system is related to the cloud-mailer, which delivers emails. To check for it, look at the cloud-mailer status and the notification queue depth, especially on delivery failures. Also, check the cloud-mailer's API status page and bounce rate when emails are not being delivered.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the image-resizer system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "image-resizer",
+      "answer": "The image-resizer system is the cdn-transform service, which resizes and optimizes product images at the edge for the cdn. To troubleshoot issues with product images loading slowly or looking wrong, check the cdn-transform edge workers and their queue.",
+      "score": 0
+    }
+  ],
+  "notes": "control 'What powers product search?' AFTER re-asked after an NVIDIA rate-limit timeout (search-index unaffected by the forget)."
+}
