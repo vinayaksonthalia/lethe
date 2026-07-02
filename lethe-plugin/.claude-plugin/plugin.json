@@ -1,0 +1,8 @@
+{
+  "name": "lethe",
+  "description": "On-call incident memory with verifiable forgetting. Triage runbooks, decommission dead systems (and prove they're gone with a measured receipt), and audit memory rot — from Claude Code, Cursor, or Antigravity. Bundles the Lethe MCP server + an incident-triage skill.",
+  "version": "0.1.0",
+  "author": { "name": "vinayaksonthalia" },
+  "keywords": ["memory", "incident", "on-call", "runbooks", "cognee", "forget", "mcp"],
+  "category": "productivity"
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "lethe": {
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp_server.py"],
+      "env": {
+        "LETHE_URL": "http://127.0.0.1:8077",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

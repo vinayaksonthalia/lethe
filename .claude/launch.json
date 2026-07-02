@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "autoPort": true,
+  "configurations": [
+    {
+      "name": "lethe",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/vinayak/Documents/devlopment/wemakdevs/cognee hackathon/cognee open/incident-detective' && ./.venv/bin/python -m uvicorn app:app --port $PORT"],
+      "port": 8077
+    }
+  ]
+}

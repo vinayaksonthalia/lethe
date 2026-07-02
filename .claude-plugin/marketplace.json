@@ -1,0 +1,11 @@
+{
+  "name": "lethe-marketplace",
+  "owner": { "name": "vinayaksonthalia" },
+  "plugins": [
+    {
+      "name": "lethe",
+      "source": "./lethe-plugin",
+      "description": "On-call incident memory with verifiable forgetting — the Lethe MCP tools + an incident-triage skill."
+    }
+  ]
+}
