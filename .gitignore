@@ -1,0 +1,26 @@
+.env
+.venv/
+.cognee_data/
+.cognee_system/
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+graph.html
+workspaces.json
+ledger_ws_*.json
+probe_ws.py
+llm_config.json
+
+# internal handoff/dev docs — local only, never shipped
+PROJECT_STATE.md
+BUILD_PLAN.md
+DEMO_SCRIPT.md
+CLAUDE.md
+
+# per-workspace runtime state (local only)
+curation_*.json
+events_*.json
+
+# local fallback: pre-rebuild 6-system golden (instant revert; not for the repo)
+golden_snapshot_6sys/
