@@ -17,7 +17,7 @@ import incident_brain as ib
 # ---------------------------------------------------------------------------
 
 def test_ask_returns_answer_and_citations(loopback_client, ib_mod):
-    async def fake_ask(q, user=None, history=None, dataset=None):
+    async def fake_ask(q, user=None, history=None, dataset=None, feedback_influence=0.0, **kwargs):
         return "Check the legacy-cache and flush it."
     ib_mod.ask = fake_ask
 
