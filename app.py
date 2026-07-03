@@ -1443,7 +1443,19 @@ PAGE = """<!doctype html>
   .wv{position:absolute;left:0;top:0;height:100%;width:200%}
   .wv-f{animation:wflow 26s linear infinite}.wv-b{animation:wflow 40s linear infinite}
   @keyframes wflow{to{transform:translateX(-50%)}}
-  @media (prefers-reduced-motion:reduce){.wv-f,.wv-b{animation:none}}
+  /* --- dashboard motion primitives (ported from the landing so /app feels as alive as /) --- */
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes shimmer{to{background-position:-200% 0}}
+  .glow{background-image:radial-gradient(220px circle at var(--mx,-200px) var(--my,-200px),rgba(34,211,238,.13),transparent 60%)}
+  .lift{transition:transform .18s ease,box-shadow .25s ease,border-color .25s ease}
+  .lift:hover{transform:translateY(-2px);box-shadow:0 18px 44px -24px rgba(2,8,20,.55);border-color:rgba(34,211,238,.35)}
+  .card-enter>*{animation:cardIn .45s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0)*45ms)}
+  .mscale{animation:modalIn .2s cubic-bezier(.22,1,.36,1)}
+  .view-enter{animation:cardIn .3s cubic-bezier(.22,1,.36,1) both}
+  .skel{background:linear-gradient(90deg,rgba(148,163,184,.10) 25%,rgba(148,163,184,.20) 37%,rgba(148,163,184,.10) 63%);background-size:200% 100%;animation:shimmer 1.3s linear infinite;border-radius:.6rem}
+  .dark .skel{background:linear-gradient(90deg,rgba(148,163,184,.06) 25%,rgba(148,163,184,.13) 37%,rgba(148,163,184,.06) 63%);background-size:200% 100%}
+  @media (prefers-reduced-motion:reduce){.wv-f,.wv-b{animation:none}.card-enter>*,.mscale,.view-enter{animation:none}.lift:hover{transform:none}.glow::before{display:none}.skel{animation:none}}
 </style>
 </head>
 <body class="min-h-screen text-slate-900 antialiased dark:text-slate-100">
@@ -1592,7 +1604,7 @@ PAGE = """<!doctype html>
       <section data-view="curation" class="hidden min-h-0 flex-1 overflow-y-auto py-8">
         <div><h2 class="serif text-2xl tracking-tight">Curation</h2>
         <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">Proactive memory hygiene — catch knowledge that has gone stale or contradicts itself, before it misleads you.</p></div>
-        <div class="mt-5 rounded-xl border border-cyan-300/70 bg-cyan-50/40 p-4 dark:border-cyan-800/50 dark:bg-cyan-950/15">
+        <div data-glow class="glow mt-5 rounded-xl border border-cyan-300/70 bg-cyan-50/40 p-4 dark:border-cyan-800/50 dark:bg-cyan-950/15">
           <div class="flex items-start justify-between gap-3">
             <div><div class="flex items-center gap-2"><span class="mono text-[10px] uppercase tracking-wide text-cyan-600 dark:text-cyan-400">The decay loop</span></div>
               <h3 class="mt-0.5 text-sm font-semibold">Run a curation cycle</h3>
@@ -1601,28 +1613,28 @@ PAGE = """<!doctype html>
           </div>
           <div id="curCycBody" class="mt-3"></div>
         </div>
-        <div class="mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
+        <div data-glow class="glow mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
           <div class="flex items-start justify-between gap-3">
             <div><h3 class="text-sm font-semibold">Stale references</h3><p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Remaining docs that still mention a decommissioned system. <span class="font-medium text-emerald-600 dark:text-emerald-400">Free · 0 tokens</span></p></div>
             <button id="curRun" class="shrink-0 rounded-full bg-zinc-950 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Scan</button>
           </div>
           <div id="curBody" class="mt-3"></div>
         </div>
-        <div class="mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
+        <div data-glow class="glow mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
           <div class="flex items-start justify-between gap-3">
             <div><h3 class="text-sm font-semibold">Conflicting runbooks</h3><p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Docs that contradict each other on a fact. <span class="font-medium text-amber-600 dark:text-amber-400">Uses your model · capped at 8 checks</span></p></div>
             <button id="curConfRun" class="shrink-0 rounded-full bg-zinc-950 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Scan</button>
           </div>
           <div id="curConfBody" class="mt-3"></div>
         </div>
-        <div class="mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
+        <div data-glow class="glow mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
           <div class="flex items-start justify-between gap-3">
             <div><h3 class="text-sm font-semibold">Aging knowledge</h3><p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Runbooks not reviewed in over 180 days — likely stale by age. <span class="font-medium text-emerald-600 dark:text-emerald-400">Free · 0 tokens</span></p></div>
             <button id="curAgeRun" class="shrink-0 rounded-full bg-zinc-950 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Scan</button>
           </div>
           <div id="curAgeBody" class="mt-3"></div>
         </div>
-        <div class="mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
+        <div data-glow class="glow mt-3 rounded-xl border border-zinc-300 bg-white/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]/50">
           <div class="flex items-start justify-between gap-3">
             <div><h3 class="text-sm font-semibold">Retirement proposals</h3><p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Long-overdue runbooks that look retired — candidates to forget. <span class="font-medium text-emerald-600 dark:text-emerald-400">Free · 0 tokens</span> · <span class="text-zinc-500 dark:text-zinc-400">Proposals only — nothing is deleted until you confirm.</span></p></div>
             <button id="curPropRun" class="shrink-0 rounded-full bg-zinc-950 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Scan</button>
@@ -1649,7 +1661,7 @@ PAGE = """<!doctype html>
 </div>
 
 <div id="wsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-  <div class="w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
+  <div class="mscale w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-500"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg><h3 class="text-base font-semibold tracking-tight">New workspace</h3></div>
     <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">A separate knowledge base with its own graph — isolated from your other workspaces.</p>
     <input id="wsModalInput" maxlength="40" placeholder="e.g. API docs, Onboarding, Vendor configs" class="mt-4 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm outline-none placeholder:text-zinc-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/25 dark:border-zinc-800 dark:bg-[#141b2b] dark:placeholder:text-zinc-500">
@@ -1662,7 +1674,7 @@ PAGE = """<!doctype html>
 </div>
 
 <div id="wsDelModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-  <div class="w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
+  <div class="mscale w-full max-w-sm rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div class="flex items-center gap-2.5"><span class="grid h-9 w-9 place-items-center rounded-full border border-red-300 bg-red-50 text-red-600 dark:border-red-800/70 dark:bg-red-950/30 dark:text-red-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span><h3 class="text-base font-semibold tracking-tight">Delete workspace?</h3></div>
     <p class="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">This permanently <b class="font-medium text-zinc-700 dark:text-zinc-200">hard-deletes</b> <span id="wsDelName" class="mono text-zinc-700 dark:text-zinc-200"></span> and all of its knowledge — graph and vectors. This can't be undone.</p>
     <div id="wsDelMsg" class="mt-2 min-h-[1rem] text-xs"></div>
@@ -1674,13 +1686,13 @@ PAGE = """<!doctype html>
 </div>
 
 <div id="fgModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-  <div class="w-full max-w-md rounded-2xl border border-zinc-300 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
+  <div class="mscale w-full max-w-md rounded-2xl border border-zinc-300 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div id="fgBody" class="p-6"></div>
   </div>
 </div>
 
 <div id="setModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-  <div class="w-full max-w-md rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
+  <div class="mscale w-full max-w-md rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-500"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><h3 class="text-base font-semibold tracking-tight">Model &amp; API key</h3></div>
     <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Bring your own provider. The key is stored locally on this machine and applied instantly — it only ever talks to the provider you pick.</p>
     <div class="mt-4 space-y-3">
@@ -1705,7 +1717,7 @@ PAGE = """<!doctype html>
 </div>
 
 <div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-  <div class="w-full max-w-md rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
+  <div class="mscale w-full max-w-md rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
     <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-500"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg><h3 class="text-base font-semibold tracking-tight">Add a system</h3></div>
     <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Name it and paste its runbook, notes or post-mortem — Lethe builds it into the knowledge graph.</p>
     <input id="addName" maxlength="60" placeholder="System name (e.g. redis-cache)" class="mt-4 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm outline-none placeholder:text-zinc-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/25 dark:border-zinc-800 dark:bg-[#141b2b] dark:placeholder:text-zinc-500">
@@ -1720,6 +1732,12 @@ PAGE = """<!doctype html>
 
 <script>
  const $=id=>document.getElementById(id);
+ // Spotlight glow: any element marked [data-glow] gets a cursor-follow radial highlight (matches the landing .card feel).
+ let _lastGlow=null;
+ document.addEventListener('pointermove',function(e){const c=e.target.closest&&e.target.closest('[data-glow]');
+   if(c!==_lastGlow&&_lastGlow){_lastGlow.style.setProperty('--mx','-200px');_lastGlow.style.setProperty('--my','-200px');}
+   _lastGlow=c;if(!c)return;
+   const r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px');},{passive:true});
  // Optional auth: if this instance is token-protected, attach the saved token to API calls and prompt
  // on a 401. No-op locally (no token set server-side → no 401 → identical behavior).
  (function(){const _f=window.fetch.bind(window);
@@ -1746,11 +1764,13 @@ PAGE = """<!doctype html>
  let activeWs=localStorage.getItem('lethe.ws')||'incidents';
  let wsList=[];
  let curView='triage';
- const navActive='bg-zinc-100 font-medium text-zinc-900 dark:bg-[#1a2233] dark:text-white';
+ const navActive='bg-zinc-100 font-medium text-zinc-900 shadow-[inset_2px_0_0_#0891b2] dark:bg-[#1a2233] dark:text-white dark:shadow-[inset_2px_0_0_#22d3ee]';
  const navIdle='text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white';
  function show(v){
    curView=v;
    document.querySelectorAll('section[data-view]').forEach(s=>s.classList.toggle('hidden',s.dataset.view!==v));
+   const _sec=document.querySelector('section[data-view="'+v+'"]');  // gentle view-enter fade+rise (skip graph — never transform the vis-network canvas)
+   if(_sec&&v!=='graph'){_sec.classList.remove('view-enter');void _sec.offsetWidth;_sec.classList.add('view-enter');}
    document.querySelectorAll('.nav').forEach(b=>{b.className='nav flex items-center justify-center md:justify-start gap-2.5 rounded-md px-2 md:px-2.5 py-2 text-sm '+(b.dataset.view===v?navActive:navIdle);});
    if(v==='systems')loadSystems();
    if(v==='graph')loadGraph();
@@ -1939,15 +1959,16 @@ PAGE = """<!doctype html>
  loadWs();
 
  async function loadSystems(){
-   const g=$('sysgrid');g.innerHTML='<div class="col-span-full rounded-xl border border-zinc-200 bg-white/50 p-4 text-sm text-zinc-400 dark:border-zinc-800 dark:bg-[#141b2b]/50">Loading systems…</div>';
+   const g=$('sysgrid');g.classList.remove('card-enter');g.innerHTML=Array(4).fill('<div class="rounded-xl border border-zinc-200 bg-white/50 px-4 py-3 dark:border-zinc-800 dark:bg-[#141b2b]/50"><div class="skel h-4 w-24"></div><div class="skel mt-2.5 h-3 w-40"></div><div class="mt-3.5 flex justify-end"><div class="skel h-7 w-28"></div></div></div>').join('');
    try{const j=await(await fetch('/systems?workspace='+encodeURIComponent(activeWs))).json();
      ctxSysCount=(j.systems&&j.systems.length)||0;renderCtx();
      if(!j.systems.length){g.innerHTML='<div class="col-span-full rounded-xl border border-dashed border-zinc-300 bg-white/50 p-8 text-center dark:border-zinc-700 dark:bg-[#141b2b]/50"><p class="text-sm text-zinc-500 dark:text-zinc-400">No systems in this workspace yet.</p><button id="emptyAdd" class="mt-3 rounded-full bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-500">Add a system</button></div>';const ea=$('emptyAdd');if(ea)ea.onclick=()=>{const b=$('addSysBtn');if(b)b.click();};return;}
-     g.innerHTML='';
+     g.innerHTML='';g.classList.add('card-enter');
      const staleDays=j.stale_days||180;
-     j.systems.forEach(s=>{
+     j.systems.forEach((s,idx)=>{
        const card=document.createElement('div');
-       card.className='flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-[#141b2b]';
+       card.className='glow lift flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-[#141b2b]';
+       card.setAttribute('data-glow','');card.style.setProperty('--i',idx);
        let meta=s.docs+' document'+(s.docs===1?'':'s');let badge='';const overdue=(s.age_days!=null&&s.age_days>staleDays);
        if(s.age_days!=null){const ago=s.age_days>=365?(s.age_days/365).toFixed(1)+'y':s.age_days+'d';meta+=' · reviewed '+ago+' ago';if(overdue)badge=' <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">overdue</span>';}
        const markBtn=overdue?'<button data-sys="'+esc(s.name)+'" class="shrink-0 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40">Mark reviewed</button>':'';
@@ -2106,13 +2127,13 @@ PAGE = """<!doctype html>
  function fmtTs(ts){const p=String(ts||'').slice(0,10).split('-');if(p.length===3){const d=new Date(+p[0],+p[1]-1,+p[2]);if(!isNaN(d))return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});}return esc(String(ts||''));}
  async function loadTimeline(){
    const b=$('tlBody');if(!b)return;
-   b.innerHTML='<div class="text-sm text-zinc-500">loading<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>';
+   b.innerHTML='<div class="ml-2 space-y-5 border-l border-zinc-200 dark:border-zinc-800">'+Array(3).fill('<div class="relative mb-5 ml-5"><span class="skel absolute -left-[1.65rem] top-1 h-3 w-3 rounded-full"></span><div class="skel h-3 w-40"></div><div class="skel mt-2 h-3 w-56"></div></div>').join('')+'</div>';
    try{
      const j=await(await fetch('/timeline?workspace='+encodeURIComponent(activeWs))).json();
      const ev=j.events||[];
      if(!ev.length){b.innerHTML='<div class="rounded-xl border border-zinc-300 bg-white/50 p-5 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-[#141b2b]/40 dark:text-zinc-400">No memory events yet for this workspace.</div>';return;}
-     let h='<ol class="relative ml-2 border-l border-zinc-200 dark:border-zinc-800">';
-     ev.forEach(e=>{
+     let h='<ol class="card-enter relative ml-2 border-l border-zinc-200 dark:border-zinc-800">';
+     ev.forEach((e,idx)=>{
        const m=TL_META[e.op]||TL_META._default, d=e.detail||{};
        let body='';
        if(e.op==='forgotten'){
@@ -2135,7 +2156,7 @@ PAGE = """<!doctype html>
          const heal=d.via==='self-heal';
          body='<p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">'+(heal?'Re-reviewed, so it self-healed — brought back to normal ranking':'Brought back to normal ranking')+(d.nodes!=null?': <span class="mono text-cyan-600 dark:text-cyan-400">'+d.nodes+' nodes</span>':'')+'.</p>';
        }
-       h+='<li class="relative mb-5 ml-5"><span class="absolute -left-[1.65rem] top-1 h-3 w-3 rounded-full ring-4 ring-[#f6f8fc] dark:ring-[#0a0e1a] '+m.dot+'"></span>'
+       h+='<li class="relative mb-5 ml-5" style="--i:'+idx+'"><span class="absolute -left-[1.65rem] top-1 h-3 w-3 rounded-full ring-4 ring-[#f6f8fc] dark:ring-[#0a0e1a] '+m.dot+'"></span>'
          +'<div class="flex flex-wrap items-center gap-2"><span class="'+m.badge+' rounded-full px-2 py-0.5 text-[11px] font-medium">'+m.label+'</span><span class="mono text-sm font-medium text-zinc-900 dark:text-zinc-100">'+esc(e.system)+'</span><span class="text-xs text-zinc-400">'+fmtTs(e.ts)+'</span></div>'
          +body+'</li>';
      });
