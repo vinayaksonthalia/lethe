@@ -32,7 +32,9 @@ ENV PYTHONUNBUFFERED=1 \
     DB_PROVIDER=sqlite \
     VECTOR_DB_PROVIDER=lancedb \
     GRAPH_DATABASE_PROVIDER=kuzu \
-    LITELLM_LOG=ERROR
+    LITELLM_LOG=ERROR \
+    MALLOC_ARENA_MAX=2 \
+    OMP_NUM_THREADS=1
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
