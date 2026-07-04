@@ -74,7 +74,7 @@ def _parse_rate(s):
     except Exception:
         return None
 _RATE = _parse_rate(os.environ.get("LETHE_RATE_LIMIT", ""))
-_RATE_PATHS = ("/forget", "/upload", "/curation/cycle", "/curation/restore", "/curation/review", "/llm-config")
+_RATE_PATHS = ("/forget", "/upload", "/curation/cycle", "/curation/restore", "/curation/review", "/llm-config", "/demo/rearm")
 _rate_hits = {}  # ip -> deque[monotonic timestamps]
 
 @app.middleware("http")
@@ -498,6 +498,7 @@ async def systems(workspace: str = "incidents"):
         return {"systems": []}
     led = _ws_led(ws["id"])
     reviewed = S.get("reviewed", {}).get(ws["id"], {})
+    demoted = S.get("demoted", {}).get(ws["id"], set())
     today = datetime.date.today()
     out = []
     for k, v in led.items():
@@ -508,8 +509,29 @@ async def systems(workspace: str = "incidents"):
                 age = (today - datetime.date.fromisoformat(iso)).days
             except Exception:
                 pass
-        out.append({"name": k, "docs": len([d for d in v if d]), "reviewed": iso, "age_days": age})
+        out.append({"name": k, "docs": len([d for d in v if d]), "reviewed": iso, "age_days": age, "demoted": k in demoted})
     return {"systems": out, "stale_days": 180}
+
+
+@app.get("/source/{system}")
+async def source(system: str, workspace: str = "incidents"):
+    """Read-only peek at the original wiki docs behind a citation chip (golden 'incidents' only).
+    404s when the system is NOT in the LIVE ledger — so after a forget the peek vanishes too and
+    can never contradict Proof-of-Forgetting. Docs come from the static WIKI (cognee-free)."""
+    if workspace != "incidents":
+        return JSONResponse({"error": "source peek is only available for the demo workspace"}, status_code=404)
+    if system not in _ws_led("incidents"):
+        return JSONResponse({"error": "not in the live ledger"}, status_code=404)
+    docs = []
+    for tag, text in ib.WIKI:
+        if tag != system:
+            continue
+        prefix = text.split(":", 1)[0].strip()
+        title = ("Runbook: " + system) if prefix.lower() == "runbook" else prefix
+        docs.append({"title": title, "text": text})
+    if not docs:
+        return JSONResponse({"error": "no source docs"}, status_code=404)
+    return {"docs": docs}
 
 
 @app.get("/curation")
@@ -1349,6 +1371,52 @@ async def upload(r: UploadReq):
     return {"state": "ingesting", "system": system}
 
 
+# --- Re-arm the demo -------------------------------------------------------
+# After the destructive forget, the only way to re-run the demo used to be terminal + restart.
+# /demo/rearm re-INGESTS the hero system's 2 runbooks into the golden dataset via the SAME proven
+# background cognify path the upload flow uses. This is an honest re-ingest, NOT an "undo": the forget
+# receipt and Timeline history stay (that is exactly the audit-log point). Gated to golden 'incidents'.
+_HERO_SYSTEM = "legacy-cache"
+
+
+async def _rearm_ingest(dataset):
+    system, wid = _HERO_SYSTEM, "incidents"
+    texts = [t for tag, t in ib.WIKI if tag == system]
+    try:
+        dids = []
+        async with _WRITE_LOCK:                                 # serialize cognee mutations
+            for text in texts:
+                r = await cognee.add(text, dataset_name=dataset)
+                info = getattr(r, "data_ingestion_info", None) or []
+                dids.append(info[0].get("data_id") if info and isinstance(info[0], dict) else None)
+            await cognee.cognify(datasets=[dataset])            # one cognify pass for both docs
+        _ws_led(wid)[system] = [str(d) if d else None for d in dids]
+        _save_ws_led(wid)
+        S.setdefault("texts", {}).setdefault(wid, {})[system] = list(texts)   # restore curation source
+        S.get("tombstones", {}).get(wid, set()).discard(system)               # re-added → no longer decommissioned
+        S.setdefault("reviewed", {}).setdefault(wid, {})[system] = datetime.date.today().isoformat()
+        _save_ws_curation(wid)
+        _append_event(wid, "added", system, {"note": "re-ingested to re-arm the demo"})
+        S["ingest"] = {"state": "done", "system": system, "wid": wid}
+    except Exception as e:
+        S["ingest"] = {"state": "error", "error": str(e)[:160], "wid": wid}
+
+
+@app.post("/demo/rearm")
+async def demo_rearm():
+    """Re-arm the golden demo by re-ingesting the hero system's runbooks (golden 'incidents' only).
+    Refuses if the system is still present, or while another ingest is running."""
+    if not S["ready"]:
+        return {"state": "error", "error": "not ready yet"}
+    if _HERO_SYSTEM in _ws_led("incidents"):
+        return {"state": "error", "error": "legacy-cache is already in the knowledge base — nothing to re-arm."}
+    if S["ingest"].get("state") == "ingesting":
+        return {"state": "busy", "error": "already ingesting — wait for it to finish"}
+    S["ingest"] = {"state": "ingesting", "system": _HERO_SYSTEM, "wid": "incidents"}   # lock before scheduling
+    asyncio.create_task(_rearm_ingest(DEFAULT_WS["dataset"]))
+    return {"state": "ingesting", "system": _HERO_SYSTEM}
+
+
 @app.get("/workspaces")
 async def workspaces_list():
     return {"workspaces": [{"id": w["id"], "name": w["name"]} for w in (S["workspaces"] or [DEFAULT_WS])]}
@@ -1455,7 +1523,13 @@ PAGE = """<!doctype html>
   .view-enter{animation:cardIn .3s cubic-bezier(.22,1,.36,1) both}
   .skel{background:linear-gradient(90deg,rgba(148,163,184,.10) 25%,rgba(148,163,184,.20) 37%,rgba(148,163,184,.10) 63%);background-size:200% 100%;animation:shimmer 1.3s linear infinite;border-radius:.6rem}
   .dark .skel{background:linear-gradient(90deg,rgba(148,163,184,.06) 25%,rgba(148,163,184,.13) 37%,rgba(148,163,184,.06) 63%);background-size:200% 100%}
-  @media (prefers-reduced-motion:reduce){.wv-f,.wv-b{animation:none}.card-enter>*,.mscale,.view-enter{animation:none}.lift:hover{transform:none}.glow::before{display:none}.skel{animation:none}}
+  @keyframes thsh{to{background-position:-200% 0}}
+  .thsh{background:linear-gradient(90deg,rgba(113,113,122,.65) 20%,rgba(34,211,238,.95) 50%,rgba(113,113,122,.65) 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:thsh 1.5s linear infinite}
+  .dark .thsh{background:linear-gradient(90deg,rgba(161,161,170,.5) 20%,rgba(34,211,238,.95) 50%,rgba(161,161,170,.5) 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text}
+  button:not(:disabled):active{transform:scale(.97)}
+  input:focus-visible,textarea:focus-visible{box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+  .drop-hot{border-color:#22d3ee!important;background-color:rgba(34,211,238,.07)!important}
+  @media (prefers-reduced-motion:reduce){.wv-f,.wv-b{animation:none}.card-enter>*,.mscale,.view-enter{animation:none}.lift:hover{transform:none}.glow::before{display:none}.skel{animation:none}.thsh{animation:none;-webkit-text-fill-color:#71717a;color:#71717a}}
 </style>
 </head>
 <body class="min-h-screen text-slate-900 antialiased dark:text-slate-100">
@@ -1501,7 +1575,7 @@ PAGE = """<!doctype html>
     </div>
     <div class="mt-auto flex flex-col gap-2 px-1">
       <div id="llmrow" class="hidden items-center gap-1.5 text-[11px] text-zinc-500 md:flex dark:text-zinc-400" title="Answers are generated by this model. Switch the provider in .env — Ollama = fully offline.">
-        <span id="llmdot" class="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400"></span><span id="llmbadge" class="truncate">…</span>
+        <span id="llmdot" class="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400"></span><span id="llmbadge" class="truncate">…</span><span id="authLock" title="Token-protected instance" class="hidden shrink-0 text-cyan-500 dark:text-cyan-400"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
       </div>
       <div class="flex items-center gap-2 px-1 text-xs text-zinc-500 dark:text-zinc-400"><span id="dot" class="h-2 w-2 shrink-0 rounded-full bg-amber-500"></span><span id="dotxt" class="hidden md:inline">starting…</span></div>
       <div class="flex items-center justify-center gap-1.5 md:flex-col md:items-stretch md:gap-1">
@@ -1546,6 +1620,7 @@ PAGE = """<!doctype html>
             <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">1</span><span><button id="demoStep1" class="text-left font-medium text-cyan-700 underline decoration-dotted underline-offset-2 transition hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300">Ask: &ldquo;If auth-service latency is high, what should I check?&rdquo;</button></span></li>
             <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">2</span><span>Then <button id="demoStep2" class="font-medium text-cyan-700 underline decoration-dotted underline-offset-2 transition hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300">decommission <span class="mono">legacy-cache</span> in Systems</button> &mdash; watch the removal receipt.</span></li>
             <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">3</span><span>Ask the <b class="font-semibold text-zinc-700 dark:text-zinc-200">exact same question</b> again &mdash; watch the answer flip to the live system.</span></li>
+            <li class="flex items-start gap-2.5"><span class="mono mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">4</span><span><button id="demoStep4" class="text-left font-medium text-cyan-700 underline decoration-dotted underline-offset-2 transition hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300">Run a curation cycle in Curation</button> &mdash; watch aging knowledge sink (reversibly), and the very stale ones queue for your approval.</span></li>
           </ol>
         </div>
         <div id="log" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation" class="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto rounded-xl border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-[#141b2b]"></div>
@@ -1587,15 +1662,20 @@ PAGE = """<!doctype html>
         <div class="flex items-end justify-between">
           <div><h2 class="serif text-2xl tracking-tight">Knowledge graph</h2>
           <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">The live graph Cognee built from your docs. Click a node to see what it connects to; decommission a system, then refresh — watch its node vanish.</p></div>
-          <button id="greload" class="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-900">Refresh</button>
+          <div class="flex items-center gap-2">
+            <input id="gsearch" placeholder="find a node…" aria-label="Search the graph" class="mono w-36 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none placeholder:text-zinc-400 focus:border-cyan-500 dark:border-zinc-800 dark:bg-[#141b2b] dark:placeholder:text-zinc-500 sm:w-52">
+            <button id="greload" class="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-900">Refresh</button>
+          </div>
         </div>
         <div class="relative mt-5 min-h-[300px] flex-1">
           <div id="graphbox" class="absolute inset-0 rounded-xl border border-zinc-300 bg-white dark:border-zinc-800 dark:bg-[#141b2b]"></div>
-          <div id="gpanel" class="hidden absolute right-3 top-3 z-10 w-72 max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-xl border border-zinc-300 bg-white/95 p-4 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-[#0e1422]/95"></div>
+          <div id="gskel" class="hidden absolute inset-0 rounded-xl skel"></div>
+          <div id="gpanel" data-glow class="glow hidden absolute right-3 top-3 z-10 w-72 max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-xl border border-zinc-300 bg-white/95 p-4 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-[#0e1422]/95"></div>
         </div>
         <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-400">
           <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span>system / concept</span>
           <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-indigo-400"></span>type</span>
+          <span id="glegDem" class="hidden flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>demoted</span>
           <span id="gmeta"></span>
           <button id="gask" class="hidden rounded-md border border-cyan-500/40 px-2 py-0.5 font-medium text-cyan-600 transition hover:bg-cyan-500/10 dark:text-cyan-400"></button>
         </div>
@@ -1604,6 +1684,7 @@ PAGE = """<!doctype html>
       <section data-view="curation" class="hidden min-h-0 flex-1 overflow-y-auto py-8">
         <div><h2 class="serif text-2xl tracking-tight">Curation</h2>
         <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">Proactive memory hygiene — catch knowledge that has gone stale or contradicts itself, before it misleads you.</p></div>
+        <div id="memHealth" class="mt-5"></div>
         <div data-glow class="glow mt-5 rounded-xl border border-cyan-300/70 bg-cyan-50/40 p-4 dark:border-cyan-800/50 dark:bg-cyan-950/15">
           <div class="flex items-start justify-between gap-3">
             <div><div class="flex items-center gap-2"><span class="mono text-[10px] uppercase tracking-wide text-cyan-600 dark:text-cyan-400">The decay loop</span></div>
@@ -1707,6 +1788,16 @@ PAGE = """<!doctype html>
       <div><label class="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">Endpoint <span class="text-zinc-400">(optional)</span></label>
         <input id="setEndpoint" class="mono w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 dark:border-zinc-800 dark:bg-[#141b2b]"></div>
     </div>
+    <div class="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+      <div class="flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-400"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Security</span></div>
+      <div id="secState" class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">checking…</div>
+      <p class="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">Single-tenant guard — one shared token gates every API route. Set <span class="mono">LETHE_AUTH_TOKEN</span> before any public deploy.</p>
+      <div id="secTokenRow" class="mt-2.5 hidden gap-2">
+        <input id="secToken" type="password" autocomplete="off" placeholder="paste access token…" class="mono flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs outline-none placeholder:text-zinc-400 focus:border-cyan-500 dark:border-zinc-800 dark:bg-[#141b2b] dark:placeholder:text-zinc-500">
+        <button id="secSet" class="shrink-0 rounded-lg border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900">Save</button>
+        <button id="secClear" class="shrink-0 rounded-lg border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900">Clear</button>
+      </div>
+    </div>
     <div id="setMsg" class="mt-3 min-h-[16px] text-xs"></div>
     <div class="mt-4 flex items-center justify-between">
       <button id="setReset" class="text-xs font-medium text-zinc-500 transition hover:text-zinc-900 dark:hover:text-white">Reset to default</button>
@@ -1728,6 +1819,23 @@ PAGE = """<!doctype html>
       <button id="addOk" class="rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Add system</button>
     </div>
   </div>
+</div>
+
+<div id="rearmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+  <div class="mscale w-full max-w-md rounded-2xl border border-zinc-300 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-[#0e1422]">
+    <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-500"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg><h3 class="text-base font-semibold tracking-tight">Re-arm the demo</h3></div>
+    <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">This re-ingests the 2 <span class="mono">legacy-cache</span> runbooks into the knowledge base so you can run the forget demo again. It runs a real cognify pass &mdash; about 30 seconds &mdash; and uses your LLM key. The original forget receipt on the Timeline stays &mdash; this is a re-ingest, not an undo.</p>
+    <div id="rearmMsg" class="mt-2 min-h-[16px] text-xs"></div>
+    <div class="mt-4 flex justify-end gap-2">
+      <button id="rearmCancel" class="rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900">Cancel</button>
+      <button id="rearmGo" class="rounded-full bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-500">Re-ingest 2 runbooks</button>
+    </div>
+  </div>
+</div>
+
+<div id="srcPeek" class="fixed inset-0 z-50 hidden">
+  <div id="srcPeekBg" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+  <div id="srcPeekPanel" class="mscale absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-zinc-300 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-[#0e1422]"></div>
 </div>
 
 <script>
@@ -1786,13 +1894,15 @@ PAGE = """<!doctype html>
    $('demoCardX').onclick=()=>{localStorage.setItem('lethe.demoCard','done');dc.classList.add('hidden');};
    $('demoStep1').onclick=()=>{show('triage');ask('If auth-service latency is high, what should I check?');};
    $('demoStep2').onclick=()=>show('systems');
+   {const s4=$('demoStep4');if(s4)s4.onclick=()=>show('curation');}
    demoCardUpd();
  })();
 
  function setDot(text,kind){$('dotxt').textContent=text;$('dot').className='h-2 w-2 rounded-full '+(kind==='ok'?'bg-emerald-500':kind==='err'?'bg-red-500':'bg-amber-500');}
  async function poll(){try{const h=await(await fetch('/health')).json();
    if(h.llm){$('llmbadge').textContent=h.llm.label+' · '+(h.llm.local?'local':'cloud');$('llmdot').className='h-1.5 w-1.5 shrink-0 rounded-full '+(h.llm.local?'bg-emerald-500':'bg-cyan-500');}
-   if(h.ready){ready=true;setDot('ready · '+((h.systems&&h.systems.length)||0)+' systems','ok');$('bAsk').disabled=false;$('bUp').disabled=false;if(ctxSysCount==null)loadCtxCount();}
+   {const al=$('authLock');if(al)al.classList.toggle('hidden',!h.auth);}
+   if(h.ready){ready=true;setDot('ready · '+((h.systems&&h.systems.length)||0)+' systems','ok');$('bAsk').disabled=false;$('bUp').disabled=false;if(ctxSysCount==null)loadCtxCount();if(!poll._mem){poll._mem=1;loadMemHealth();}}
    else{setDot(h.status||'starting…','wait');setTimeout(poll,2000);}
  }catch(e){setTimeout(poll,2000);}}
  poll();
@@ -1822,9 +1932,86 @@ PAGE = """<!doctype html>
  function addSources(c,sources){const box=c.parentElement;const bar=document.createElement('div');
    bar.className='mt-1.5 flex flex-wrap items-center gap-1.5';
    bar.innerHTML='<span class="mono text-[10px] uppercase tracking-wide text-zinc-400">sources</span>';
-   sources.forEach(s=>{const b=document.createElement('button');b.className='mono rounded-full border border-zinc-300 bg-zinc-100/60 px-3 py-1 text-[11px] text-zinc-500 transition hover:-translate-y-px hover:border-cyan-500/50 hover:text-cyan-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400 dark:hover:text-cyan-400';b.textContent=s;b.title='Ask about '+s;b.onclick=()=>askAbout(s);bar.appendChild(b);});
-   box.appendChild(bar);}
- const THINKING='<span class="text-zinc-400">thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>';
+   sources.forEach(s=>{const b=document.createElement('button');b.className='mono rounded-full border border-zinc-300 bg-zinc-100/60 px-3 py-1 text-[11px] text-zinc-500 transition hover:-translate-y-px hover:border-cyan-500/50 hover:text-cyan-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-400 dark:hover:text-cyan-400';b.textContent=s;b.title='View the source for '+s;b.onclick=()=>openSource(s);bar.appendChild(b);});
+   box.appendChild(bar);maybeAddConnMap(box,bar,sources);}
+ // X1: "Show connections" — an on-demand, STATIC mini-map of an answer's cited entities + their 1-hop
+ // neighbours, built from the REAL /graph (Entity/EntityType-filtered, same keep-filter as the Graph view).
+ // No hand-curated adjacency: if fewer than 2 nodes resolve, the button never renders. One open at a time.
+ var _gcache={},_openConnMap=null;
+ function invalidateGraphCache(ws){if(ws)delete _gcache[ws];else _gcache={};}
+ async function getGraphCached(ws){if(_gcache[ws])return _gcache[ws];try{var d=await(await fetch('/graph?workspace='+encodeURIComponent(ws))).json();if(d&&d.nodes){_gcache[ws]=d;return d;}}catch(e){}return null;}
+ function connNorm(v){return String(v||'').toLowerCase().replace(/[\\s_]+/g,'-');}
+ function resolveConn(graph,sources){var keep={Entity:1,EntityType:1};
+   var nodes=graph.nodes.filter(function(n){return keep[n.type];}),byId={};nodes.forEach(function(n){byId[n.id]=n;});
+   var cites=(sources||[]).map(connNorm).filter(function(x){return x;});
+   var hits=[];nodes.forEach(function(n){var nl=connNorm(n.label);for(var i=0;i<cites.length;i++){var cq=cites[i];if(nl===cq||nl.indexOf(cq)>=0||cq.indexOf(nl)>=0){hits.push(n.id);break;}}});
+   if(!hits.length)return null;
+   var edges=graph.edges.filter(function(e){return byId[e.source]&&byId[e.target];});
+   var hitSet={};hits.forEach(function(id){hitSet[id]=1;});var ids=hits.slice();
+   edges.forEach(function(e){if(hitSet[e.source]&&byId[e.target].type==='Entity'&&ids.indexOf(e.target)<0)ids.push(e.target);if(hitSet[e.target]&&byId[e.source].type==='Entity'&&ids.indexOf(e.source)<0)ids.push(e.source);});
+   ids=ids.slice(0,12);var idset={};ids.forEach(function(id){idset[id]=1;});
+   return {nodes:ids.map(function(id){return byId[id];}),edges:edges.filter(function(e){return idset[e.source]&&idset[e.target];})};}
+ function buildConnMap(container,resolved){loadVis(function(){
+   var p=gpal();
+   var nds=new vis.DataSet(resolved.nodes.map(function(n){return {id:n.id,label:n.label,shape:'dot',size:9,color:gbase(n,p),font:{color:p.font,size:11,strokeWidth:4,strokeColor:p.halo}};}));
+   var eds=new vis.DataSet(resolved.edges.map(function(e,i){return {id:i,from:e.source,to:e.target,color:{color:p.edge,opacity:1},width:1};}));
+   var net=new vis.Network(container,{nodes:nds,edges:eds},{nodes:{borderWidth:2},edges:{smooth:{type:'continuous',roundness:.4},arrows:{to:{enabled:true,scaleFactor:.3}}},physics:{solver:'forceAtlas2Based',stabilization:{iterations:140,fit:true}},interaction:{dragNodes:false,dragView:false,zoomView:false,hover:false,selectable:false,keyboard:false}});
+   net.once('stabilizationIterationsDone',function(){net.setOptions({physics:false});net.fit();var cv=container.querySelector('canvas');if(cv){cv.setAttribute('aria-hidden','true');cv.setAttribute('tabindex','-1');}});
+ });}
+ async function maybeAddConnMap(box,bar,sources){
+   if(!sources||!sources.length)return;
+   var graph=await getGraphCached(activeWs);if(!graph||!graph.nodes)return;
+   var resolved=resolveConn(graph,sources);
+   if(!resolved||resolved.nodes.length<2)return;                                  // silent skip — never an empty map
+   var btn=document.createElement('button');btn.className='mono text-[11px] text-zinc-400 transition hover:text-cyan-600 dark:hover:text-cyan-400';btn.textContent='Show connections ↳';btn.setAttribute('aria-label','Show a map of the connections in this answer');
+   var map=document.createElement('div');map.setAttribute('aria-hidden','true');map.className='hidden mt-2 h-56 w-full overflow-hidden rounded-xl border border-zinc-200 bg-white/60 dark:border-zinc-800 dark:bg-[#0e1422]/60';
+   var built=false;
+   btn.onclick=function(){
+     if(map.classList.contains('hidden')){
+       if(_openConnMap&&_openConnMap.el!==map){_openConnMap.el.classList.add('hidden');_openConnMap.btn.textContent='Show connections ↳';}
+       map.classList.remove('hidden');btn.textContent='Hide connections ↑';_openConnMap={el:map,btn:btn};
+       if(!built){built=true;buildConnMap(map,resolved);}
+     }else{map.classList.add('hidden');btn.textContent='Show connections ↳';if(_openConnMap&&_openConnMap.el===map)_openConnMap=null;}
+   };
+   bar.appendChild(btn);box.appendChild(map);
+ }
+ // Citation source peek — a right slide-over showing the ORIGINAL wiki doc(s) behind a chip.
+ // Server-side ledger-gated: after a forget the /source route 404s, so the peek vanishes with the
+ // evidence (it must never contradict Proof-of-Forgetting). askAbout stays, as a secondary action.
+ function srcPeekHead(n){return '<div class="flex items-start justify-between gap-2"><div><div class="mono text-[10px] uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-400">source</div><h3 class="serif mt-0.5 text-xl tracking-tight">'+esc(n)+'</h3></div><button id="srcPeekX" aria-label="Close source" class="-mr-1 -mt-1 shrink-0 rounded p-1 text-zinc-400 transition hover:text-zinc-600 dark:hover:text-zinc-200"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>';}
+ async function openSource(name){const p=$('srcPeek'),panel=$('srcPeekPanel');if(!p||!panel)return;
+   panel.innerHTML=srcPeekHead(name)+'<div class="mt-4 space-y-3"><div class="skel h-24 w-full"></div></div>';
+   p.classList.remove('hidden');
+   let body='';
+   try{const r=await fetch('/source/'+encodeURIComponent(name)+'?workspace='+encodeURIComponent(activeWs));
+     if(r.ok){const j=await r.json();const docs=j.docs||[];
+       body='<p class="mono mt-2 text-[10px] uppercase tracking-wide text-zinc-400">'+docs.length+' document'+(docs.length===1?'':'s')+' &middot; from the knowledge base</p>'+
+         '<div class="mt-3 space-y-3">'+docs.map(d=>'<div class="rounded-xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-[#141b2b]"><div class="text-xs font-semibold text-zinc-700 dark:text-zinc-200">'+esc(d.title)+'</div><p class="mt-1.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">'+esc(d.text)+'</p></div>').join('')+'</div>';
+     }else{body='<p class="mt-4 text-sm text-zinc-500 dark:text-zinc-400">No original source document is available for this citation here.</p>';}
+   }catch(e){body='<p class="mt-4 text-sm text-red-500">Could not load the source.</p>';}
+   body+='<button id="srcPeekAsk" class="mt-5 w-full shrink-0 rounded-lg border border-cyan-500/40 px-3 py-2 text-sm font-medium text-cyan-600 transition hover:bg-cyan-500/10 dark:text-cyan-400">Ask about this &rarr;</button>';
+   panel.innerHTML=srcPeekHead(name)+body;
+   $('srcPeekX').onclick=closeSource;
+   $('srcPeekAsk').onclick=()=>{closeSource();askAbout(name);};}
+ function closeSource(){const p=$('srcPeek');if(p)p.classList.add('hidden');}
+ {const _bg=$('srcPeekBg');if(_bg)_bg.onclick=closeSource;}
+ // M4: re-arm the demo — an honest re-INGEST of the hero runbooks (never framed as an undo).
+ function openRearm(){const m=$('rearmModal');if(!m)return;const msg=$('rearmMsg');if(msg)msg.innerHTML='';const go=$('rearmGo');if(go)go.disabled=false;m.classList.remove('hidden');m.classList.add('flex');}
+ function closeRearm(){const m=$('rearmModal');if(!m)return;m.classList.add('hidden');m.classList.remove('flex');}
+ async function doRearm(){const go=$('rearmGo'),msg=$('rearmMsg');if(!go||!msg)return;go.disabled=true;
+   msg.innerHTML='<div class="text-zinc-500">re-ingesting <span class="mono">legacy-cache</span><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> (a real cognify pass, ~30s)</div><div class="skel mt-2 h-1.5 w-full"></div>';
+   try{const up=await(await fetch('/demo/rearm',{method:'POST'})).json();
+     if(up.state==='error'||up.state==='busy'||up.error){go.disabled=false;msg.innerHTML='<span class="text-red-500">'+esc(up.error||'could not re-arm')+'</span>';return;}
+     const deadline=Date.now()+120000;
+     const t=setInterval(async()=>{
+       if(Date.now()>deadline){clearInterval(t);go.disabled=false;msg.innerHTML='<span class="text-red-500">taking longer than expected — check Systems in a moment.</span>';return;}
+       const st=await(await fetch('/ingest-status')).json();
+       if(st.state==='done'){clearInterval(t);invalidateGraphCache('incidents');closeRearm();if(curView==='systems')loadSystems();if(curView==='timeline')loadTimeline();}
+       else if(st.state==='error'){clearInterval(t);go.disabled=false;msg.innerHTML='<span class="text-red-500">re-ingest failed: '+esc(st.error||'')+'</span>';}
+     },2000);
+   }catch(e){go.disabled=false;msg.innerHTML='<span class="text-red-500">re-arm failed</span>';}}
+ (function(){const ca=$('rearmCancel'),go=$('rearmGo'),m=$('rearmModal');if(ca)ca.onclick=closeRearm;if(go)go.onclick=doRearm;if(m)m.addEventListener('click',e=>{if(e.target===m)closeRearm();});})();
+ const THINKING='<span class="thsh">thinking...</span>';
  async function ask(q){q=(q||$('q').value).trim();if(!q||!ready)return;
    const t=ensureThread(q);const hist=t.msgs.slice(-6);
    t.msgs.push({role:'user',content:q});saveThreads();renderBar();
@@ -1936,7 +2123,7 @@ PAGE = """<!doctype html>
    }catch(e){if(msg)msg.innerHTML='<span class="text-red-500">Request failed — is the server running?</span>';$('wsDelOk').disabled=false;}
  }
  (function(){const ok=$('wsDelOk'),ca=$('wsDelCancel'),m=$('wsDelModal');if(ok)ok.onclick=doDelWs;if(ca)ca.onclick=closeWsDel;if(m)m.addEventListener('click',e=>{if(e.target===m)closeWsDel();});})();
- function switchWs(id){activeWs=id;localStorage.setItem('lethe.ws',id);$('wsMenu').classList.add('hidden');ctxSysCount=null;renderWsName();loadCtxCount();loadThreads();renderBar();renderLog();demoCardUpd();if(curView==='systems')loadSystems();if(curView==='graph')loadGraph();if(curView==='timeline')loadTimeline();}
+ function switchWs(id){activeWs=id;localStorage.setItem('lethe.ws',id);invalidateGraphCache();$('wsMenu').classList.add('hidden');ctxSysCount=null;renderWsName();loadCtxCount();loadThreads();renderBar();renderLog();demoCardUpd();if(curView==='systems')loadSystems();if(curView==='graph')loadGraph();if(curView==='timeline')loadTimeline();}
  function createWs(){$('wsMenu').classList.add('hidden');$('wsModalInput').value='';const cm=$('wsModalMsg');if(cm)cm.textContent='';$('wsModalOk').disabled=false;const m=$('wsModal');m.classList.remove('hidden');m.classList.add('flex');setTimeout(()=>$('wsModalInput').focus(),40);}
  function closeWsModal(){const m=$('wsModal');m.classList.add('hidden');m.classList.remove('flex');}
  async function doCreateWs(){const name=($('wsModalInput').value||'').trim();if(!name)return;const msg=$('wsModalMsg');if(msg)msg.textContent='';$('wsModalOk').disabled=true;
@@ -1951,7 +2138,7 @@ PAGE = """<!doctype html>
  // Esc closes whichever modal / graph panel is open (backdrop-click already works everywhere).
  document.addEventListener('keydown',function(e){
    if(e.key!=='Escape')return;
-   const ids=['fgDone','fgCancel','fgX','setCancel','addCancel','wsDelCancel','wsModalCancel','gpclose'];
+   const ids=['srcPeekX','rearmCancel','fgDone','fgCancel','fgX','setCancel','addCancel','wsDelCancel','wsModalCancel','gpclose'];
    for(let i=0;i<ids.length;i++){const el=$(ids[i]);if(el&&el.offsetParent!==null){el.click();return;}}
  });
  $('wsBtn').onclick=e=>{e.stopPropagation();const m=$('wsMenu');if(m.classList.contains('hidden')){renderWsMenu();m.classList.remove('hidden');}else{m.classList.add('hidden');}};
@@ -1964,6 +2151,13 @@ PAGE = """<!doctype html>
      ctxSysCount=(j.systems&&j.systems.length)||0;renderCtx();
      if(!j.systems.length){g.innerHTML='<div class="col-span-full rounded-xl border border-dashed border-zinc-300 bg-white/50 p-8 text-center dark:border-zinc-700 dark:bg-[#141b2b]/50"><p class="text-sm text-zinc-500 dark:text-zinc-400">No systems in this workspace yet.</p><button id="emptyAdd" class="mt-3 rounded-full bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-500">Add a system</button></div>';const ea=$('emptyAdd');if(ea)ea.onclick=()=>{const b=$('addSysBtn');if(b)b.click();};return;}
      g.innerHTML='';g.classList.add('card-enter');
+     // M4: after the hero forget, the golden Systems view offers an in-app re-arm (re-ingest, not undo).
+     if(activeWs==='incidents'&&!j.systems.some(s=>s.name==='legacy-cache')){
+       const rc=document.createElement('div');
+       rc.className='col-span-full rounded-xl border border-cyan-300/60 bg-cyan-50/40 p-4 dark:border-cyan-800/40 dark:bg-cyan-950/15';
+       rc.innerHTML='<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div class="text-sm font-medium text-zinc-800 dark:text-zinc-100">Demo was run &mdash; <span class="mono">legacy-cache</span> was verifiably forgotten.</div><p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Re-ingest its 2 runbooks to run the forget demo again. ~30s &middot; uses your LLM key &middot; the Timeline receipt stays.</p></div><button id="rearmBtn" class="shrink-0 rounded-full border border-cyan-500/50 bg-white/70 px-4 py-2 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50 dark:bg-transparent dark:text-cyan-300 dark:hover:bg-cyan-950/30">Re-arm the demo</button></div>';
+       g.appendChild(rc);const rb=rc.querySelector('#rearmBtn');if(rb)rb.onclick=openRearm;
+     }
      const staleDays=j.stale_days||180;
      j.systems.forEach((s,idx)=>{
        const card=document.createElement('div');
@@ -1971,6 +2165,7 @@ PAGE = """<!doctype html>
        card.setAttribute('data-glow','');card.style.setProperty('--i',idx);
        let meta=s.docs+' document'+(s.docs===1?'':'s');let badge='';const overdue=(s.age_days!=null&&s.age_days>staleDays);
        if(s.age_days!=null){const ago=s.age_days>=365?(s.age_days/365).toFixed(1)+'y':s.age_days+'d';meta+=' · reviewed '+ago+' ago';if(overdue)badge=' <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">overdue</span>';}
+       if(s.demoted)badge+=' <span class="ml-1 inline-flex items-center gap-1 rounded-full border border-amber-300/70 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>demoted · reversible</span>';
        const markBtn=overdue?'<button data-sys="'+esc(s.name)+'" class="shrink-0 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40">Mark reviewed</button>':'';
        card.innerHTML='<div class="min-w-0"><div class="mono text-sm font-medium">'+esc(s.name)+'</div><div class="mt-0.5 text-xs text-zinc-400">'+meta+badge+'</div></div>'+
          '<div class="flex flex-wrap items-center justify-end gap-2">'+markBtn+'<button class="decom shrink-0 rounded-full border border-red-300 bg-red-50/50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:-translate-y-px hover:border-red-400 hover:bg-red-50 dark:border-red-800/70 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40">Decommission</button></div>';
@@ -1985,17 +2180,39 @@ PAGE = """<!doctype html>
  // system. Step 1 is DETERMINISTIC: pure text matching, zero LLM calls (the strongest token guardrail).
  // Curation opens as a live dashboard: auto-run the two FREE (0-token, deterministic) scans on first open;
  // the conflict scan stays MANUAL because it spends model tokens (cost stays opt-in + transparent).
- function loadCuration(){const cyc=$('curCycBody');if(cyc&&cyc.dataset.ran!=='1')cyc.innerHTML='<div class="text-sm text-zinc-400">Click <span class="font-medium text-zinc-500 dark:text-zinc-300">Run cycle</span> for a free preview of what would be demoted or queued — nothing changes until you apply.</div>';
+ // S1: Memory health — a deterministic, 0-token score (no gauge, no sidebar number). Computed client-side
+ // from the same aging + stale-ref scans the curation view already runs. Formula: 100 - 3*overdue(cap30)
+ // - 5*veryStale(cap20) - 8*staleRefs(cap24). Golden = 7 / 3 / 0 -> 64.
+ function memScore(o,v,s){return Math.max(0,100-Math.min(3*o,30)-Math.min(5*v,20)-Math.min(8*s,24));}
+ function tweenCount(el,to){if(!el)return;if(gReduced){el.textContent=to;return;}var t0=performance.now();
+   (function step(now){var k=Math.min(1,(now-t0)/700);el.textContent=Math.round(to*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step);})(t0);
+   setTimeout(function(){el.textContent=to;},820);}  // guarantee the final value even if rAF is throttled (background tab)
+ function curationDot(score){var nav=document.querySelector('[data-view="curation"]');if(!nav)return;nav.classList.add('relative');var dot=nav.querySelector('.curdot');
+   if(score<80&&!dot){dot=document.createElement('span');dot.className='curdot absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500';dot.title='Memory health below 80';nav.appendChild(dot);}
+   else if(score>=80&&dot){dot.remove();}}
+ async function loadMemHealth(){var box=$('memHealth');var o=0,v=0,s=0;
+   try{var aj=await(await fetch('/curation/aging?workspace='+encodeURIComponent(activeWs)+'&days=180')).json();var ag=aj.aging||[];o=ag.length;v=ag.filter(function(x){return x.age_days>360;}).length;}catch(e){}
+   try{var cj=await(await fetch('/curation?workspace='+encodeURIComponent(activeWs))).json();s=(cj.findings||[]).length;}catch(e){}
+   var score=memScore(o,v,s);curationDot(score);if(!box)return;
+   var ageDed=Math.min(3*o,30)+Math.min(5*v,20),refDed=Math.min(8*s,24);
+   var why=o+' overdue · '+v+' very stale · '+s+' stale reference'+(s===1?'':'s');
+   box.innerHTML='<div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5"><span class="serif text-2xl tracking-tight text-zinc-900 dark:text-zinc-100">Memory health <span id="memScore">0</span></span><span class="text-sm text-zinc-500 dark:text-zinc-400">'+why+'</span></div>'+
+     '<div class="mt-2 flex h-1 w-full max-w-md overflow-hidden rounded-full bg-zinc-200/60 dark:bg-zinc-800/60"><div style="width:'+score+'%" class="h-full bg-emerald-500/80"></div><div style="width:'+ageDed+'%" class="h-full bg-amber-500/80"></div><div style="width:'+refDed+'%" class="h-full bg-red-500/80"></div></div>'+
+     '<div class="mono mt-1 text-[10px] uppercase tracking-wide text-zinc-400">deterministic · free · 0 tokens</div>';
+   tweenCount($('memScore'),score);}
+ function loadCuration(){loadMemHealth();const cyc=$('curCycBody');if(cyc&&cyc.dataset.ran!=='1')cyc.innerHTML='<div class="text-sm text-zinc-400">Click <span class="font-medium text-zinc-500 dark:text-zinc-300">Run cycle</span> for a free preview of what would be demoted or queued — nothing changes until you apply.</div>';
    const b=$('curBody');if(b&&b.dataset.ran!=='1')runCuration();
    const cb=$('curConfBody');if(cb&&cb.dataset.ran!=='1')cb.innerHTML='<div class="text-sm text-zinc-400">Scan for contradictions between runbooks. <span class="text-amber-600 dark:text-amber-400">Uses your model</span> — click Scan when you want it.</div>';
    const ab=$('curAgeBody');if(ab&&ab.dataset.ran!=='1')runAging();
    const pb=$('curPropBody');if(pb&&pb.dataset.ran!=='1')runProposals();}
- async function runAging(){const b=$('curAgeBody');if(!b)return;b.dataset.ran='1';b.innerHTML='<div class="text-sm text-zinc-500">checking review dates<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>';
+ // 2-row shimmer skeleton for curation scans (replaces the old "scanning..." text line)
+ function curSkel(){return '<div class="space-y-2.5"><div class="skel h-16 w-full"></div><div class="skel h-16 w-full"></div></div>';}
+ async function runAging(){const b=$('curAgeBody');if(!b)return;b.dataset.ran='1';b.innerHTML=curSkel();
    try{const j=await(await fetch('/curation/aging?workspace='+encodeURIComponent(activeWs)+'&days=180')).json();
      const a=j.aging||[];const meta=(j.scanned||0)+' runbooks · 0 tokens';
      if(!a.length){b.innerHTML='<div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"><span class="font-semibold">All fresh.</span> Every runbook was reviewed within '+(j.days||180)+' days. <span class="opacity-70">('+meta+')</span></div>';return;}
-     let h='<div class="mb-3 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+a.length+' overdue for review</span> · '+meta+'</div><div class="space-y-2.5">';
-     a.forEach(x=>{const ago=x.age_days>=365?(x.age_days/365).toFixed(1)+' years':Math.round(x.age_days/30)+' months';h+='<div class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.system)+'</span><span class="text-zinc-400">last reviewed</span><span class="mono font-medium text-amber-600 dark:text-amber-400">'+esc(x.reviewed)+'</span></div><p class="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">'+x.age_days+' days ago (~'+ago+') — verify it is still accurate.</p></div><button data-sys="'+esc(x.system)+'" class="shrink-0 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40">Mark reviewed</button></div></div>';});
+     let h='<div class="mb-3 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+a.length+' overdue for review</span> · '+meta+'</div><div class="card-enter space-y-2.5">';
+     a.forEach((x,idx)=>{const ago=x.age_days>=365?(x.age_days/365).toFixed(1)+' years':Math.round(x.age_days/30)+' months';h+='<div style="--i:'+idx+'" class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.system)+'</span><span class="text-zinc-400">last reviewed</span><span class="mono font-medium text-amber-600 dark:text-amber-400">'+esc(x.reviewed)+'</span></div><p class="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">'+x.age_days+' days ago (~'+ago+') — verify it is still accurate.</p></div><button data-sys="'+esc(x.system)+'" class="shrink-0 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40">Mark reviewed</button></div></div>';});
      h+='</div>';b.innerHTML=h;
      b.querySelectorAll('button[data-sys]').forEach(btn=>btn.onclick=()=>markReviewed(btn));
    }catch(e){b.innerHTML='<div class="text-sm text-red-500">scan failed</div>';}
@@ -2003,7 +2220,7 @@ PAGE = """<!doctype html>
  // Aging detection→action: mark a runbook reviewed-today → it leaves the overdue list + lands on the Timeline.
  async function markReviewed(btn){const sys=btn.dataset.sys;btn.disabled=true;btn.classList.add('opacity-50','pointer-events-none');
    try{const r=await(await fetch('/curation/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sys,workspace:activeWs})})).json();
-     if(r&&r.ok){if(curView==='systems')loadSystems();if($('curAgeBody')&&$('curAgeBody').dataset.ran==='1')runAging();if($('curPropBody')&&$('curPropBody').dataset.ran==='1')runProposals();if(curView==='timeline')loadTimeline();}else{btn.disabled=false;btn.classList.remove('opacity-50','pointer-events-none');}
+     if(r&&r.ok){loadMemHealth();if(curView==='systems')loadSystems();if($('curAgeBody')&&$('curAgeBody').dataset.ran==='1')runAging();if($('curPropBody')&&$('curPropBody').dataset.ran==='1')runProposals();if(curView==='timeline')loadTimeline();}else{btn.disabled=false;btn.classList.remove('opacity-50','pointer-events-none');}
    }catch(e){btn.disabled=false;btn.classList.remove('opacity-50','pointer-events-none');}
  }
  (function(){const r=$('curAgeRun');if(r)r.onclick=runAging;})();
@@ -2011,14 +2228,14 @@ PAGE = """<!doctype html>
  // runbooks). PROPOSALS ONLY: each row offers two HUMAN-GATED actions and nothing is deleted automatically.
  //  • "Forget…" reuses the EXISTING Proof-of-Forgetting modal (forgetFlow → /forget → receipt + certificate).
  //  • "Keep / mark reviewed" reuses the EXISTING mark-reviewed action so the human can dismiss a proposal.
- async function runProposals(){const b=$('curPropBody');if(!b)return;b.dataset.ran='1';b.innerHTML='<div class="text-sm text-zinc-500">finding retirement candidates<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>';
+ async function runProposals(){const b=$('curPropBody');if(!b)return;b.dataset.ran='1';b.innerHTML=curSkel();
    try{const j=await(await fetch('/curation/proposals?workspace='+encodeURIComponent(activeWs)+'&days=365')).json();
      const p=j.proposals||[];const meta=(j.scanned||0)+' runbooks · 0 tokens';
      if(!p.length){b.innerHTML='<div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"><span class="font-semibold">Nothing to retire.</span> No runbook is overdue past '+(j.days||365)+' days. <span class="opacity-70">('+meta+')</span></div>';return;}
      let h='<div class="mb-2 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+p.length+' retirement candidate'+(p.length===1?'':'s')+'</span> · '+meta+'</div>'+
-       '<p class="mb-3 text-xs text-zinc-400">Proposals only — nothing is deleted until you confirm.</p><div class="space-y-2.5">';
-     p.forEach(x=>{const ago=x.age_days>=365?(x.age_days/365).toFixed(1)+' years':Math.round(x.age_days/30)+' months';
-       h+='<div class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex items-start justify-between gap-3"><div class="min-w-0">'+
+       '<p class="mb-3 text-xs text-zinc-400">Proposals only — nothing is deleted until you confirm.</p><div class="card-enter space-y-2.5">';
+     p.forEach((x,idx)=>{const ago=x.age_days>=365?(x.age_days/365).toFixed(1)+' years':Math.round(x.age_days/30)+' months';
+       h+='<div style="--i:'+idx+'" class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex items-start justify-between gap-3"><div class="min-w-0">'+
          '<div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.system)+'</span><span class="text-zinc-400">last reviewed</span><span class="mono font-medium text-amber-600 dark:text-amber-400">'+esc(x.last_reviewed)+'</span></div>'+
          '<p class="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">'+x.age_days+' days ago (~'+ago+') — looks retired. '+esc((x.reasons||[])[0]||'')+'</p></div>'+
          '<div class="flex shrink-0 items-center gap-2">'+
@@ -2044,6 +2261,7 @@ PAGE = """<!doctype html>
      const j=await(await fetch('/curation/cycle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspace:activeWs,dry_run:!apply})})).json();
      if(j.error){b.innerHTML='<div class="text-sm text-red-500">'+esc(j.error)+'</div>';return;}
      renderCycle(b,j,apply);
+     if(apply)invalidateGraphCache(activeWs);
      if(apply&&curView==='timeline')loadTimeline();
    }catch(e){b.innerHTML='<div class="text-sm text-red-500">cycle failed</div>';}
  }
@@ -2093,23 +2311,23 @@ PAGE = """<!doctype html>
    }catch(e){btn.disabled=false;btn.textContent='Restore';}
  }
  (function(){const r=$('curCycRun');if(r)r.onclick=()=>runCurationCycle(false);})();
- async function runConflicts(){const b=$('curConfBody');if(!b)return;b.dataset.ran='1';b.innerHTML='<div class="text-sm text-zinc-500">checking for contradictions<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> (uses your model)</div>';
+ async function runConflicts(){const b=$('curConfBody');if(!b)return;b.dataset.ran='1';b.innerHTML=curSkel();
    try{const j=await(await fetch('/curation/conflicts?workspace='+encodeURIComponent(activeWs))).json();
      const c=j.conflicts||[];const meta=(j.pairs_checked||0)+' pair'+(j.pairs_checked===1?'':'s')+' checked'+(j.capped?' (capped at 8)':'');
      if(!c.length){b.innerHTML='<div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"><span class="font-semibold">No contradictions.</span> Your runbooks agree with each other. <span class="opacity-70">('+meta+')</span></div>';return;}
-     let h='<div class="mb-3 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+c.length+' conflict'+(c.length===1?'':'s')+'</span> · '+meta+'</div><div class="space-y-2.5">';
-     c.forEach(x=>{h+='<div class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.a)+'</span><span class="text-zinc-400">contradicts</span><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.b)+'</span></div><p class="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">'+esc(x.detail)+'</p></div>';});
+     let h='<div class="mb-3 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+c.length+' conflict'+(c.length===1?'':'s')+'</span> · '+meta+'</div><div class="card-enter space-y-2.5">';
+     c.forEach((x,idx)=>{h+='<div style="--i:'+idx+'" class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.a)+'</span><span class="text-zinc-400">contradicts</span><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.b)+'</span></div><p class="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">'+esc(x.detail)+'</p></div>';});
      h+='</div>';b.innerHTML=h;
    }catch(e){b.innerHTML='<div class="text-sm text-red-500">scan failed</div>';}
  }
  (function(){const r=$('curConfRun');if(r)r.onclick=runConflicts;})();
- async function runCuration(){const b=$('curBody');b.dataset.ran='1';b.innerHTML='<div class="text-sm text-zinc-500">scanning<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>';
+ async function runCuration(){const b=$('curBody');b.dataset.ran='1';b.innerHTML=curSkel();
    try{const j=await(await fetch('/curation?workspace='+encodeURIComponent(activeWs))).json();
      const f=j.findings||[];const meta=(j.scanned||0)+' docs scanned · 0 tokens';
      if(!f.length){b.innerHTML='<div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"><span class="font-semibold">Clean.</span> No remaining runbook references a decommissioned system. <span class="opacity-70">('+meta+')</span></div>';return;}
      const hl=(snip,dead)=>{const e=esc(snip);try{return e.replace(new RegExp('('+dead.replace(/[^A-Za-z0-9]/g,'\\\\$&')+')','ig'),'<span class="rounded bg-red-100 px-1 font-medium text-red-700 line-through decoration-red-400 dark:bg-red-950/50 dark:text-red-300">$1</span>');}catch(_){return e;}};
-     let h='<div class="mb-3 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+f.length+' stale reference'+(f.length===1?'':'s')+'</span> · '+meta+'</div><div class="space-y-2.5">';
-     f.forEach(x=>{h+='<div class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.system)+'</span><span class="text-zinc-400">still mentions</span><span class="mono font-medium text-red-600 dark:text-red-400">'+esc(x.stale_ref)+'</span></div><p class="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">…'+hl(x.snippet,x.stale_ref)+'…</p></div>';});
+     let h='<div class="mb-3 text-sm text-zinc-500 dark:text-zinc-400"><span class="font-medium text-amber-600 dark:text-amber-400">'+f.length+' stale reference'+(f.length===1?'':'s')+'</span> · '+meta+'</div><div class="card-enter space-y-2.5">';
+     f.forEach((x,idx)=>{h+='<div style="--i:'+idx+'" class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/15"><div class="flex flex-wrap items-center gap-1.5 text-sm"><span class="mono font-medium text-zinc-900 dark:text-zinc-100">'+esc(x.system)+'</span><span class="text-zinc-400">still mentions</span><span class="mono font-medium text-red-600 dark:text-red-400">'+esc(x.stale_ref)+'</span></div><p class="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">…'+hl(x.snippet,x.stale_ref)+'…</p></div>';});
      h+='</div>';b.innerHTML=h;
    }catch(e){b.innerHTML='<div class="text-sm text-red-500">scan failed</div>';}
  }
@@ -2184,7 +2402,7 @@ PAGE = """<!doctype html>
      '<p class="mt-1 text-xs text-zinc-400">removing from the graph + vectors, then verifying</p></div>';
    const ac=new AbortController();const to=setTimeout(()=>ac.abort(),75000);  // don't spin forever if the server stalls
    try{const res=await fetch('/forget',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:fgSys,workspace:activeWs}),signal:ac.signal});
-     clearTimeout(to);if(!res.ok)throw new Error('bad status');const j=await res.json();fgDidForget=true;
+     clearTimeout(to);if(!res.ok)throw new Error('bad status');const j=await res.json();fgDidForget=true;invalidateGraphCache(activeWs);
      if(fgCard){fgCard.classList.add('dissolving');const c=fgCard;setTimeout(()=>{c&&c.remove();},760);}  // only dissolve AFTER the delete actually succeeds
      const rec=j.receipt||{system:fgSys,docs:0};if(!rec.event_id&&j.event_id)rec.event_id=j.event_id;rec._ws=j.workspace||activeWs;fgReceipt(rec);
    }catch(e){clearTimeout(to);const msg=e&&e.name==='AbortError'?'This is taking too long — the decommission may still be finishing. Refresh Systems in a moment to check.':'Could not complete the decommission.';$('fgBody').innerHTML='<div class="py-7 text-center"><p class="text-sm text-red-500">'+esc(msg)+'</p><button id="fgX" class="mt-4 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-800">Close</button></div>';$('fgX').onclick=fgClose;}
@@ -2226,17 +2444,17 @@ PAGE = """<!doctype html>
  const gReduced=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches);
  function loadVis(cb){if(window.vis)return cb();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js';s.onload=cb;s.onerror=()=>{$('gmeta').textContent='could not load the graph library';};document.head.appendChild(s);}
  function gpal(){const dark=document.documentElement.classList.contains('dark');return dark?{
-     ent:{background:'#22d3ee',border:'#0891b2'},typ:{background:'#818cf8',border:'#6366f1'},
+     ent:{background:'#22d3ee',border:'#0891b2'},typ:{background:'#818cf8',border:'#6366f1'},dem:{background:'#f59e0b',border:'#d97706'},
      dimNode:{background:'rgba(100,116,139,.16)',border:'rgba(100,116,139,.22)'},
      font:'#e2e8f0',fontDim:'rgba(148,163,184,.30)',halo:'#0a0e1a',
      edge:'rgba(100,116,139,.42)',edgeDim:'rgba(100,116,139,.09)',edgeHi:'#22d3ee',efont:'#cbd5e1',glow:'rgba(34,211,238,.85)'
    }:{
-     ent:{background:'#0891b2',border:'#0e7490'},typ:{background:'#6366f1',border:'#4f46e5'},
+     ent:{background:'#0891b2',border:'#0e7490'},typ:{background:'#6366f1',border:'#4f46e5'},dem:{background:'#d97706',border:'#b45309'},
      dimNode:{background:'rgba(148,163,184,.22)',border:'rgba(148,163,184,.28)'},
      font:'#0f172a',fontDim:'rgba(100,116,139,.40)',halo:'#f4f7fc',
      edge:'rgba(148,163,184,.70)',edgeDim:'rgba(148,163,184,.22)',edgeHi:'#0891b2',efont:'#334155',glow:'rgba(8,145,178,.55)'
    };}
- function gbase(n,p){return n.type==='Entity'?{background:p.ent.background,border:p.ent.border}:{background:p.typ.background,border:p.typ.border};}
+ function gbase(n,p){return n._demoted?{background:p.dem.background,border:p.dem.border}:(n.type==='Entity'?{background:p.ent.background,border:p.ent.border}:{background:p.typ.background,border:p.typ.border});}
  // animate node opacities toward targets (~170ms easeOutCubic) — the smooth Obsidian focus-pull; snaps on reduced-motion.
  function gAnimate(nop){
    if(gRaf){cancelAnimationFrame(gRaf);gRaf=null;}
@@ -2301,18 +2519,27 @@ PAGE = """<!doctype html>
    if(rels.length||types.length){h+='<div class="mt-3 text-[11px] uppercase tracking-wide text-zinc-400">blast radius</div>';
      h+='<div class="mt-1.5 flex gap-1">'+[1,2,3].map(d=>'<button data-d="'+d+'" class="gpradb flex-1 rounded-md border px-2 py-1 text-[11px] font-medium transition '+(d===gpdepth?'border-cyan-500/60 bg-cyan-500/10 text-cyan-600 dark:text-cyan-300':'border-zinc-200 text-zinc-500 hover:border-cyan-500/50 dark:border-zinc-700 dark:text-zinc-400')+'">'+d+(d>1?' hops':' hop')+'</button>').join('')+'</div>';}
    h+='<button id="gpask" class="mt-3 w-full rounded-lg border border-cyan-500/40 px-3 py-1.5 text-xs font-medium text-cyan-600 transition hover:bg-cyan-500/10 dark:text-cyan-400">Ask about this →</button>';
-   el.innerHTML=h;el.classList.remove('hidden');
+   el.innerHTML=h;el.classList.remove('hidden');el.classList.remove('mscale');void el.offsetWidth;el.classList.add('mscale');
    $('gpclose').onclick=()=>{gPanelHide();gpinned=null;gpdepth=1;gReset();gMeta(null);};
    $('gpask').onclick=()=>askAbout(n.label);
    [...el.querySelectorAll('.gpradb')].forEach(b=>b.onclick=()=>{gFocusHops(id,+b.dataset.d);gPanelShow(id);});
  }
  function loadGraph(){loadVis(async()=>{
    $('gmeta').textContent='loading…';gpinned=null;
+   {const gs=$('gskel');if(gs)gs.classList.remove('hidden');}const _gbx=$('graphbox');if(_gbx){_gbx.style.transition='opacity .45s ease';_gbx.style.opacity='0';}
    try{const d=await(await fetch('/graph?workspace='+encodeURIComponent(activeWs))).json();
      if(d.error){$('gmeta').textContent='error: '+d.error;return;}
      const p=gpal();
      const keep={Entity:1,EntityType:1};
      const kn=d.nodes.filter(n=>keep[n.type]);
+     // M2d: tint demoted systems amber (client-side; fail-safe — reuses the demote state from /systems)
+     let demCount=0;
+     try{const sj=await(await fetch('/systems?workspace='+encodeURIComponent(activeWs))).json();
+       const gnorm=v=>String(v||'').toLowerCase().replace(/[\\s_]+/g,'-');
+       const demSet=new Set((sj.systems||[]).filter(s=>s.demoted).map(s=>gnorm(s.name)));
+       if(demSet.size)kn.forEach(n=>{if(demSet.has(gnorm(n.label))){n._demoted=true;demCount++;}});
+     }catch(_){}
+     {const gl=$('glegDem');if(gl)gl.classList.toggle('hidden',demCount===0);}
      const ids=new Set(kn.map(n=>n.id));
      const ke=d.edges.filter(e=>ids.has(e.source)&&ids.has(e.target)).map((e,i)=>({source:e.source,target:e.target,label:e.label,_id:i}));
      const deg={};ke.forEach(e=>{deg[e.source]=(deg[e.source]||0)+1;deg[e.target]=(deg[e.target]||0)+1;});
@@ -2333,26 +2560,43 @@ PAGE = """<!doctype html>
      const gk=$('gask');
      gnet.on('click',pr=>{if(pr.nodes&&pr.nodes.length){gpinned=pr.nodes[0];gpdepth=1;gFocusHops(gpinned,1);gMeta(gpinned);gPanelShow(gpinned);if(gk)gk.classList.add('hidden');gnet.focus(gpinned,{scale:gnet.getScale(),locked:false,animation:{duration:500,easingFunction:'easeInOutCubic'}});}else{gpinned=null;gpdepth=1;gReset();gMeta(null);gPanelHide();gnet.fit({animation:{duration:600,easingFunction:'easeInOutQuad'}});}});
      gnet.on('doubleClick',pr=>{if(pr.nodes&&pr.nodes.length){const n=gdata.byId[pr.nodes[0]];if(n)askAbout(n.label);}});
-     gnet.once('stabilizationIterationsDone',()=>gnet.fit({animation:{duration:600,easingFunction:'easeInOutQuad'}}));
+     // S2: reveal-settle — fade the canvas in + a slight camera zoom-out once layout stabilizes (physics untouched).
+     gnet.once('stabilizationIterationsDone',()=>{
+       const gs=$('gskel');if(gs)gs.classList.add('hidden');
+       box.style.opacity='1';
+       gnet.fit({animation:false});
+       const target=gnet.getScale(),pos=gnet.getViewPosition();
+       if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+       gnet.moveTo({scale:target*1.15,position:pos});                                            // start a touch zoomed-in
+       gnet.moveTo({scale:target,position:pos,animation:{duration:650,easingFunction:'easeOutCubic'}});  // settle: zoom out into view
+     });
      window.gFocus=gFocus;window.gReset=gReset;window.gFocusHops=gFocusHops;
      gMeta(null);
    }catch(e){$('gmeta').textContent='failed to load graph';}
  });}
  $('greload').onclick=loadGraph;
+ // S2: search a node by label (hyphen/space-normalized), Enter → focus + halo; Esc/clear → reset.
+ function gSearch(){if(!gnet||!gdata)return;var raw=($('gsearch').value||'').trim();
+   if(!raw){gpinned=null;gReset();gMeta(null);gPanelHide();return;}
+   var q=raw.toLowerCase().replace(/[\\s_]+/g,'-'),norm=function(n){return String(n.label||'').toLowerCase().replace(/[\\s_]+/g,'-');};
+   var hit=gdata.kn.find(function(n){return norm(n)===q;})||gdata.kn.find(function(n){return norm(n).indexOf(q)>=0;});
+   if(!hit){gMeta(null);return;}
+   gpinned=hit.id;gFocus(hit.id);gMeta(hit.id);gnet.focus(hit.id,{scale:1.15,animation:{duration:600,easingFunction:'easeInOutCubic'}});}
+ (function(){var gi=$('gsearch');if(gi)gi.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();gSearch();}else if(e.key==='Escape'){gi.value='';gpinned=null;if(gnet&&gdata){gReset();gMeta(null);}}});})();
 
  // upload
  const drop=$('drop');let pending='';
  $('file').addEventListener('change',e=>readFiles(e.target.files));
- drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('border-zinc-500');});
- drop.addEventListener('dragleave',()=>drop.classList.remove('border-zinc-500'));
- drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('border-zinc-500');readFiles(e.dataTransfer.files);});
+ drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drop-hot');});
+ drop.addEventListener('dragleave',()=>drop.classList.remove('drop-hot'));
+ drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drop-hot');readFiles(e.dataTransfer.files);});
  function readFiles(files){if(!files||!files.length)return;const f=files[0];const rd=new FileReader();
    rd.onload=()=>{pending=rd.result;if(!$('upsys').value)$('upsys').value=f.name.replace(/\\.[^.]+$/,'');$('upmsg').innerHTML='<span class="text-zinc-500">loaded <b>'+esc(f.name)+'</b> ('+f.size+' bytes) — name it and click Ingest.</span>';};
    rd.readAsText(f);}
  $('bUp').onclick=async()=>{
    const text=(pending||$('paste').value).trim();const system=($('upsys').value||'uploaded').trim();
    if(!text){$('upmsg').innerHTML='<span class="text-red-500">nothing to ingest — drop a file or paste text.</span>';return;}
-   $('bUp').disabled=true;$('upmsg').innerHTML='<span class="text-zinc-500">ingesting <b>'+esc(system)+'</b> — building the graph<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> (this can take ~1 min)</span>';
+   $('bUp').disabled=true;$('upmsg').innerHTML='<div class="text-zinc-500">ingesting <b>'+esc(system)+'</b> — building the graph<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> (this can take ~1 min)</div><div class="skel mt-2 h-1.5 w-full"></div>';
    const upWs=activeWs;
    try{const up=await(await fetch('/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,system:system,workspace:activeWs})})).json();
      if(up.state==='error'||up.state==='busy'||up.error){$('bUp').disabled=false;$('upmsg').innerHTML='<span class="text-red-500">'+esc(up.error||'could not ingest')+'</span>';return;}
@@ -2397,7 +2641,18 @@ PAGE = """<!doctype html>
      fill('groq');$('setProvider').value='groq';  // safe fallback (never default to OpenAI, which we don't demo)
      try{const cfg=await(await fetch('/llm-config')).json();const p=detect(cfg);$('setProvider').value=p;fill(p);
        if(cfg.model)$('setModelInput').value=cfg.model;if(cfg.endpoint)$('setEndpoint').value=cfg.endpoint;}catch(e){}
+     renderSec();
      setTimeout(()=>$('setProvider').focus(),40);}
+   // M5: surface the EXISTING single-tenant auth — read-only /health probe + client-token controls (no backend change).
+   async function renderSec(){const ss=$('secState'),row=$('secTokenRow');if(!ss)return;
+     let auth=false;try{const h=await(await fetch('/health')).json();auth=!!h.auth;}catch(e){}
+     const hasTok=!!localStorage.getItem('lethe.token');
+     if(auth)ss.innerHTML='<span class="font-medium text-cyan-700 dark:text-cyan-300">Protected</span> — this instance requires an access token. '+(hasTok?'A token is saved in this browser.':'No token saved yet — you will be prompted on the next API call.');
+     else ss.innerHTML='<span class="font-medium text-zinc-700 dark:text-zinc-200">Open (local mode)</span> — no token required.'+(hasTok?' A leftover client token is saved.':'');
+     if(row)row.classList.toggle('hidden',!(auth||hasTok));
+     const sc=$('secClear');if(sc)sc.classList.toggle('hidden',!hasTok);}
+   {const st=$('secSet');if(st)st.onclick=()=>{const v=($('secToken').value||'').trim();if(v){localStorage.setItem('lethe.token',v);$('secToken').value='';renderSec();}};}
+   {const sc=$('secClear');if(sc)sc.onclick=()=>{localStorage.removeItem('lethe.token');renderSec();};}
    function close(){m.classList.add('hidden');m.classList.remove('flex');}
    $('setBtn').onclick=open;$('setCancel').onclick=close;
    m.addEventListener('click',e=>{if(e.target===m)close();});

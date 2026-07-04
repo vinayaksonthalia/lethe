@@ -143,3 +143,21 @@ def test_mutating_route_allowed_for_loopback_client(loopback_client, ib_mod, mon
     r = loopback_client.post("/forget", json={"system": "nonexistent", "workspace": "incidents"})
     assert r.status_code == 200
     assert "No documents tagged" in r.json()["message"]
+
+
+# ---------------------------------------------------------------------------
+# 13. /source/{system} citation peek — golden wiki docs, ledger-gated (404 post-forget)
+# ---------------------------------------------------------------------------
+
+def test_source_peek_returns_wiki_docs_and_404s_when_absent(loopback_client):
+    # legacy-cache is in the seeded live ledger AND has 2 docs in the static WIKI
+    # (runbook + post-mortem) -> 200 with both, cognee-free.
+    r = loopback_client.get("/source/legacy-cache")
+    assert r.status_code == 200
+    docs = r.json()["docs"]
+    assert len(docs) == 2
+    assert all(d["title"] and d["text"] for d in docs)
+    assert any("cache" in d["text"].lower() for d in docs)
+    # A system that is NOT in the live ledger -> 404 (this is exactly what makes the
+    # peek vanish after a forget, so it can't contradict Proof-of-Forgetting).
+    assert loopback_client.get("/source/nonexistent").status_code == 404
