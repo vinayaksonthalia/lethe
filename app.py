@@ -13,7 +13,7 @@ import litellm  # already pulled in by cognee — used for the bounded conflict-
 litellm.suppress_debug_info = True
 from cognee.modules.users.methods import get_default_user
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +38,7 @@ _PUBLIC_DEMO = os.environ.get("LETHE_PUBLIC_DEMO", "").strip().lower() in ("1", 
 # Proven hero-safe — with uniform weights (nothing demoted) results are identical to influence=0.
 LIVE_FEEDBACK_INFLUENCE = float(os.environ.get("LETHE_FEEDBACK_INFLUENCE", "0.6"))
 _AUTH_OPEN = {"/", "/app", "/health", "/evidence", "/favicon.ico", "/favicon.svg"}
+_AUTH_OPEN_PREFIXES = ("/learn",)   # the docs/blog viewer is public content, like the landing
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1"}
 
 def _is_authenticated(request: Request) -> bool:
@@ -55,7 +56,8 @@ def _is_loopback_client(request: Request) -> bool:
 
 @app.middleware("http")
 async def _auth_gate(request: Request, call_next):
-    if request.url.path not in _AUTH_OPEN and not request.url.path.startswith("/shot/"):
+    if request.url.path not in _AUTH_OPEN and not request.url.path.startswith("/shot/") \
+            and not request.url.path.startswith(_AUTH_OPEN_PREFIXES):
         if _AUTH_TOKEN:
             # A token is configured — every sensitive route requires it (timing-safe compare).
             if not _is_authenticated(request):
@@ -1524,6 +1526,62 @@ async def evidence():
         }
     except Exception:
         return {"available": False}
+
+
+# --- /learn — the in-app docs/blog, rendering the learning/ chapters ---------------------------------
+# The learning/ folder is the project explained end-to-end (architecture, cognee deep-dive, research
+# story). /learn serves it as a readable blog: an index + raw markdown, rendered client-side. Public
+# content (auth-open, like the landing); read-only; path-traversal guarded.
+_LEARN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "learning")
+# Internal working notes — real docs, wrong audience for the public blog (process scaffolding, not the story).
+_LEARN_EXCLUDE = {"bug-hunt.md", "hackathon-winners-research.md", "security-review.md", "ui-audit.md"}
+
+
+def _learn_files():
+    out = []
+    for root, dirs, files in os.walk(_LEARN_DIR):
+        dirs.sort()
+        for fn in sorted(files):
+            if fn.endswith(".md"):
+                rel = os.path.relpath(os.path.join(root, fn), _LEARN_DIR)
+                rel = rel.replace(os.sep, "/")
+                if rel not in _LEARN_EXCLUDE:
+                    out.append(rel)
+    return out
+
+
+@app.get("/learn/index.json")
+async def learn_index():
+    docs = []
+    for rel in _learn_files():
+        title = os.path.splitext(os.path.basename(rel))[0].replace("-", " ")
+        try:
+            with open(os.path.join(_LEARN_DIR, rel), encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("#"):
+                        title = line.lstrip("#").strip()
+                        break
+        except Exception:
+            pass
+        docs.append({"path": rel, "title": title})
+    return {"docs": docs}
+
+
+@app.get("/learn/raw/{doc_path:path}")
+async def learn_raw(doc_path: str):
+    base = os.path.realpath(_LEARN_DIR)
+    full = os.path.realpath(os.path.join(base, doc_path))
+    if not (full.startswith(base + os.sep) and full.endswith(".md") and os.path.isfile(full)):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if os.path.relpath(full, base).replace(os.sep, "/") in _LEARN_EXCLUDE:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    with open(full, encoding="utf-8") as f:
+        return PlainTextResponse(f.read(), media_type="text/markdown; charset=utf-8")
+
+
+@app.get("/learn", response_class=HTMLResponse)
+async def learn_view():
+    return _read_tpl("learn.html")
 
 
 @app.get("/", response_class=HTMLResponse)
