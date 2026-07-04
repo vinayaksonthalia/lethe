@@ -1,0 +1,26 @@
+# Render blueprint — one always-on free web service running the Lethe demo image.
+# The golden graph is baked into the image at build; no disk needed (a restart
+# resets to golden, and the in-app Re-arm button recovers the demo after a forget).
+#
+# Set in the Render dashboard (Environment):
+#   LETHE_AUTH_TOKEN  — required; goes in the submission notes, gates every API route
+#   LLM_API_KEY       — your Gemini key
+# Free-tier note: the service sleeps after ~15 min idle; the repo's keepalive
+# workflow (.github/workflows/keepalive.yml) pings /health every 10 min.
+services:
+  - type: web
+    name: lethe
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: LETHE_AUTH_TOKEN
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: openai/gemini-2.5-flash
+      - key: LLM_ENDPOINT
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: LETHE_RATE_LIMIT
+        value: 20/60

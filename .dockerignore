@@ -1,0 +1,27 @@
+# Build context hygiene — code + golden snapshot only.
+.venv
+.git
+.github
+.claude
+.claude-plugin
+.pytest_cache
+__pycache__
+**/__pycache__
+.cognee_data
+.cognee_system
+golden_snapshot_6sys
+research
+learning
+docs
+tests
+*.png
+graph.html
+err.txt
+scratch*
+# Secrets / local state — NEVER in the image. Config comes from runtime env vars.
+.env
+llm_config.json
+curation_*.json
+events_*.json
+ledger_ws_*.json
+workspaces.json

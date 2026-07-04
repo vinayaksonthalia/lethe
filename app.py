@@ -2822,7 +2822,7 @@ LANDING = """<!doctype html>
   <p class="rise mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400" style="animation-delay:.24s">It <span class="font-medium text-zinc-900 dark:text-zinc-100">remembers</span> your runbooks across every session — and <span class="font-medium text-zinc-900 dark:text-zinc-100">forgets</span> the systems you kill, so you never chase a dead one at 3&nbsp;a.m.</p>
   <div class="rise mt-9 flex flex-wrap justify-center gap-3" style="animation-delay:.34s">
     <a href="/app" class="rounded-full bg-zinc-950 px-7 py-3 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-lg hover:shadow-cyan-500/10 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Launch the app →</a>
-    <a href="#how" class="rounded-xl border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900">See how it works</a>
+    <a href="#scrolly" class="rounded-xl border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900">Watch it forget &rarr;</a>
   </div>
   <div class="rise mx-auto mt-14 flex max-w-3xl flex-col items-center gap-4" style="animation-delay:.44s">
     <span class="mono text-[10px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">works with</span>
@@ -2862,7 +2862,7 @@ LANDING = """<!doctype html>
       <button id="lgbtn" class="shrink-0 rounded-lg border border-zinc-300 px-3.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:-translate-y-0.5 hover:border-red-300 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-red-800/70 dark:hover:text-red-400">Decommission legacy-cache</button>
     </div>
   </div>
-  <p class="mt-3.5 text-center text-sm text-zinc-500 dark:text-zinc-400">The real thing builds this from your runbooks — <a href="/app" class="underline decoration-dotted underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-400">open the app</a> for the full graph (hover to trace blast radius, click to decommission).</p>
+  <p class="mt-3.5 text-center text-sm text-zinc-500 dark:text-zinc-400">The real thing builds this from your runbooks — <a href="/app" class="underline decoration-dotted underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-400">open the app</a> for the full graph.</p>
 </section>
 
 <section class="mx-auto max-w-2xl px-5 pb-24">
@@ -2878,7 +2878,7 @@ LANDING = """<!doctype html>
       <button class="shrink-0 rounded-full bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Ask</button>
     </form>
   </div>
-  <p class="mt-3 text-center text-xs text-zinc-400">A real query against the live knowledge graph — not a script. To watch the <span class="text-zinc-600 dark:text-zinc-300">forget</span> flip end-to-end, <a href="/app" class="underline decoration-dotted underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-400">open the app</a> and decommission a system.</p>
+  <p class="mt-3 text-center text-xs text-zinc-400">A real query against the live graph — not a script. For the full <span class="text-zinc-600 dark:text-zinc-300">forget</span> flip, <a href="/app" class="underline decoration-dotted underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-400">open the app</a>.</p>
 </section>
 
 <section id="scrolly" class="scrolly relative border-t border-zinc-300 dark:border-zinc-900">
@@ -2913,13 +2913,15 @@ LANDING = """<!doctype html>
       <div class="mb-1 text-center mono text-xs uppercase tracking-[0.18em] text-zinc-400">the platform</div>
       <h2 class="serif mb-12 text-center text-3xl tracking-tight sm:text-4xl">Memory you can rely on.</h2>
       <div class="stg grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg></div><div><h3 class="text-sm font-semibold">Persistent threads</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Every conversation is saved — pick any of them back up later.</p></div></div>
-        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></div><div><h3 class="text-sm font-semibold">Isolated workspaces</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Separate knowledge bases, each with its own graph and memory.</p></div></div>
-        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><h3 class="text-sm font-semibold">Multi-turn context</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Follow-ups understand what you just asked — no repeating yourself.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg></div><div><h3 class="text-sm font-semibold">Persistent threads</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Every conversation saved — pick it back up later.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></div><div><h3 class="text-sm font-semibold">Isolated workspaces</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Separate knowledge bases, each with its own graph.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><h3 class="text-sm font-semibold">Multi-turn context</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Follow-ups understand what you just asked.</p></div></div>
         <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><h3 class="text-sm font-semibold">Runs fully offline</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Point it at a local model — nothing leaves your machine.</p></div></div>
-        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div><div><h3 class="text-sm font-semibold">Verifiable deletion</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Hard-delete across graph and vectors — with measured proof.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div><div><h3 class="text-sm font-semibold">Verifiable deletion</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Hard-delete across graph and vectors — receipt included, re-arm in one click.</p></div></div>
         <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="m7 7.5 3.5 8.5M17 7.5 13.5 16M7.2 6.4h9.6"/></svg></div><div><h3 class="text-sm font-semibold">Hybrid memory</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">A knowledge graph and a vector store, working together.</p></div></div>
-        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2"/></svg></div><div><h3 class="text-sm font-semibold">Callable over MCP</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Triage, decommission and curate from Claude or Cursor — Lethe's memory as MCP tools, plus a one-command Claude Code plugin with an incident-triage skill.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2"/></svg></div><div><h3 class="text-sm font-semibold">Callable over MCP</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Triage and decommission from Claude or Cursor — plus a one-command Claude Code plugin.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></div><div><h3 class="text-sm font-semibold">Citations that open</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Click a chip to read the original runbook — after a forget, it is verifiably gone too.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div><h3 class="text-sm font-semibold">Memory health, measured</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">One deterministic staleness score plus a reversible decay loop — free, 0 tokens.</p></div></div>
       </div>
     </div>
   </div>
@@ -2930,7 +2932,7 @@ LANDING = """<!doctype html>
     <div class="reveal text-center">
       <div class="mb-1 mono text-xs uppercase tracking-[0.18em] text-zinc-400">how it works</div>
       <h2 class="serif text-3xl tracking-tight sm:text-4xl">The whole loop — including the verb everyone skips.</h2>
-      <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">Lethe uses Cognee's real memory primitives end to end. Every step below is an actual call in the codebase — remember, recall, and the one almost no one ships: <span class="font-medium text-zinc-900 dark:text-zinc-100">forget</span>.</p>
+      <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">Every step is a real call in the codebase — remember, recall, and the one almost no one ships: <span class="font-medium text-zinc-900 dark:text-zinc-100">forget</span>.</p>
     </div>
     <div id="lifecycle" class="relative mt-12">
       <div class="lc-rail hidden text-zinc-200 dark:text-zinc-800 sm:block" aria-hidden="true"></div>
@@ -2945,7 +2947,7 @@ LANDING = """<!doctype html>
     </div>
     <div class="reveal mt-8 mx-auto max-w-2xl rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 p-5">
       <div class="mono text-xs text-zinc-400">deliberately omitted</div>
-      <div class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Cognee also ships <span class="mono text-zinc-700 dark:text-zinc-300">improve()</span> / self-improvement that silently grows memory from interactions. We don't use it — unchecked accumulation is the rot we set out to fix. Memory grows only on <span class="font-medium text-zinc-900 dark:text-zinc-100">explicit ingest</span> and shrinks on <span class="font-medium text-zinc-900 dark:text-zinc-100">verified forget</span>.</div>
+      <div class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Cognee also ships <span class="mono text-zinc-700 dark:text-zinc-300">improve()</span> — memory that silently grows itself. We skip it: memory grows on <span class="font-medium text-zinc-900 dark:text-zinc-100">explicit ingest</span>, shrinks on <span class="font-medium text-zinc-900 dark:text-zinc-100">verified forget</span>.</div>
     </div>
   </div>
 </section>
@@ -2955,7 +2957,7 @@ LANDING = """<!doctype html>
     <div class="reveal text-center">
       <div class="mb-1 mono text-xs uppercase tracking-[0.18em] text-zinc-400">the stale-advice benchmark</div>
       <h2 class="serif text-3xl tracking-tight sm:text-4xl">Forgetting, proven.</h2>
-      <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">Most memory products claim they handle stale knowledge. We measure it. A reproducible benchmark asks on-call questions over a multi-system corpus, decommissions three systems, and re-asks — an independent model, blind to before/after, scores every answer. The scores below show stale advice corrected, the assistant abstaining (&ldquo;not documented&rdquo;) on what is gone, and unrelated answers held steady.</p>
+      <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">Most memory products claim they handle stale knowledge. We measure it — decommission three systems, re-ask, and let a blind judge score every answer.</p>
     </div>
     <div id="evGrid" class="reveal mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
     <div id="evProof" class="reveal mt-4"></div>
@@ -2966,7 +2968,7 @@ LANDING = """<!doctype html>
 <section class="border-t border-zinc-300 dark:border-zinc-900">
   <div class="mx-auto max-w-3xl px-5 py-24 text-center">
     <h2 class="reveal serif text-4xl tracking-tight sm:text-5xl">Everyone builds AI that remembers more.</h2>
-    <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">The whole on-call AI field accumulates — and the industry admits that knowledge rots: a stale runbook is as likely to mislead as to help. Lethe is built around the opposite move: <span class="font-medium text-zinc-900 dark:text-zinc-100">forgetting the dead thing, on command and verifiably</span>.</p>
+    <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">The whole field accumulates — and stale runbooks mislead as often as they help. Lethe makes the opposite move: <span class="font-medium text-zinc-900 dark:text-zinc-100">forgetting the dead thing, on command and verifiably</span>.</p>
   </div>
 </section>
 

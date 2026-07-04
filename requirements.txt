@@ -1,11 +1,13 @@
 # Lethe — runtime dependencies (Python 3.12; this project uses a uv-managed ./.venv).
 # Install:  uv pip install -r requirements.txt --python ./.venv/bin/python
 #
-# The memory/graph stack — kuzu (graph DB), lancedb (vectors), and fastembed
-# (local, free embeddings) — is pulled in transitively by cognee, so it is not
-# pinned separately here.
+# The memory/graph stack — kuzu (graph DB) and lancedb (vectors) — is pulled in
+# transitively by cognee, so it is not pinned separately here. fastembed is NOT
+# (verified during the Docker build): pin it explicitly for the local, free
+# embeddings path (EMBEDDING_PROVIDER=fastembed).
 
 cognee==1.1.3
+fastembed==0.8.0
 
 # Web app (FastAPI chat on :8077)
 fastapi==0.138.0

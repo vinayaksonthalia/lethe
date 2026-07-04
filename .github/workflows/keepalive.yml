@@ -1,0 +1,19 @@
+# Keeps the free-tier Render instance awake (it sleeps after ~15 min idle).
+# Set the repo variable LETHE_URL to the deployed base URL (e.g.
+# https://lethe-xxxx.onrender.com) — until it is set, the job exits quietly.
+name: keepalive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          if [ -z "${{ vars.LETHE_URL }}" ]; then
+            echo "LETHE_URL repo variable not set - skipping"
+            exit 0
+          fi
+          curl -sS --max-time 30 "${{ vars.LETHE_URL }}/health" | head -c 200
