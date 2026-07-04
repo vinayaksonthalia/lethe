@@ -1555,6 +1555,7 @@ def _learn_files():
 _LEARN_NAV = [
     ("Getting started", [
         ("00-the-big-picture/what-is-this.md", "Introduction"),
+        ("using-lethe.md", "Using Lethe — the hands-on guide"),
         ("00-the-big-picture/the-problem-static-memory-rots.md", "The problem: memory rots"),
         ("00-the-big-picture/what-we-built.md", "What Lethe is"),
         ("06-the-product-now.md", "Every feature, mapped"),

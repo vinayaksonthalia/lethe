@@ -140,9 +140,9 @@ Want the deep version? Every stage is a flowchart in [`learning/01-how-it-works/
 
 <div align="center">
 
-<img src="docs/screenshots/graph.png" alt="The knowledge graph with a node detail panel" width="92%">
+<img src="docs/screenshots/graph.gif" alt="The live knowledge graph: physics settling, hover halo, click for blast radius" width="92%">
 
-<em>The live graph Cognee builds from plain prose. Click a node to read its real connections — <code>legacy-cache → caused → memory eviction storm → impacted → login system</code>. These edges are exactly what plain vector memory forgets.</em>
+<em>The live graph Cognee builds from plain prose — physics settling in, hover to trace, click a node for its blast radius. These edges are exactly what plain vector memory forgets.</em>
 
 </div>
 
@@ -211,7 +211,7 @@ A flowchart for every one of these lives in [`learning/06-the-product-now.md`](l
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/curation.png" alt="Curation dashboard"><br><em align="center">Curation — stale refs + aging auto-run (free); contradictions stay opt-in.</em></td>
+<td width="50%"><img src="docs/screenshots/curation.gif" alt="Curation: health score, decay-cycle preview, reversible demotes"><br><em align="center">Curation — the health score, a free cycle preview, and reversible demotes (amber in Systems + Graph).</em></td>
 <td width="50%"><img src="docs/screenshots/timeline.png" alt="Memory timeline"><br><em>Memory timeline — a durable audit log of what was learned, reviewed, and forgotten.</em></td>
 </tr>
 </table>
@@ -245,7 +245,7 @@ cp .env.example .env      # then paste a Groq key into LLM_API_KEY
 
 **No key yet?** The app still starts and the prebuilt graph loads: **Systems**, **Graph**, **Timeline**, and the free **Curation** scans all work offline. Only the parts that call the model — **Triage chat**, **Upload/ingest**, and the forget re-query proof — need a key.
 
-Then run [the demo beat](#the-hero-the-same-question-before-and-after) — ask, decommission `legacy-cache`, ask again. Reset any time with `scripts/reset_demo.py`.
+Then run [the demo beat](#the-hero-the-same-question-before-and-after) — ask, decommission `legacy-cache`, ask again. Reset any time with `scripts/reset_demo.py`. Full hands-on guide: [Using Lethe](https://vinayaksonthalia-lethe.hf.space/learn#using-lethe.md) · deploying your own: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
 
@@ -340,7 +340,7 @@ The `learning/` folder isn't an afterthought — it's verified against the runni
 
 ## Roadmap
 
-- ~~Deploy it~~ **Deployed** — the [live demo](https://vinayaksonthalia-lethe.hf.space) runs the Dockerfile in this repo (golden graph baked at build, keep-alive pinger, hosted-demo mode). Remaining sliver: a written deployment *guide* (which would also close [cognee-integrations#89](https://github.com/topoteretes/cognee-integrations/issues/89)).
+- ~~Deploy it~~ **Deployed & documented** — the [live demo](https://vinayaksonthalia-lethe.hf.space) runs the Dockerfile in this repo (golden graph baked at build, keep-alive pinger, hosted-demo mode), and [`docs/DEPLOY.md`](docs/DEPLOY.md) covers Docker / HF Spaces / Render, the three security modes, and sizing. (Upstreaming it would close [cognee-integrations#89](https://github.com/topoteretes/cognee-integrations/issues/89).)
 - **De-risk the Cognee 1.2.x upgrade** behind a tight custom `graph_model` (also cleans up extracted entities).
 - **Enterprise layer** — org accounts + RBAC and server-side chat sessions on top of the existing auth gate (turns single-tenant boxes into a managed multi-team deployment).
 - **Finish the `app.py` split** — the page shells moved to `templates/` already (3,272 → ~1,500 lines, byte-identical serving); route modules are the remaining post-hackathon step.
