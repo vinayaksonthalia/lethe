@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lethe — Learn: how the memory works, end to end</title>
+<title>Lethe Docs — how the memory works, end to end</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 24' fill='none' stroke='%2322d3ee' stroke-width='2.4' stroke-linecap='round'><path d='M2 12c2.2-4 4.4-4 6.6 0s4.4 4 6.6 0'/><path d='M9 12c2.2-4 4.4-4 6.6 0s4.4 4 6.6 0' opacity='.45'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -20,31 +20,31 @@
   body{font-family:'Geist',system-ui,sans-serif}
   .serif{font-family:'Instrument Serif','Spectral',Georgia,serif;font-weight:400}
   .mono{font-family:'Geist Mono',ui-monospace,monospace}
-  /* readable article styling for the rendered markdown */
-  .prose{line-height:1.75;font-size:.98rem}
-  .prose h1{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:2.1rem;letter-spacing:-.01em;margin:0 0 1rem}
-  .prose h2{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:1.55rem;margin:2.2rem 0 .7rem}
-  .prose h3{font-weight:600;font-size:1.12rem;margin:1.8rem 0 .5rem}
+  .prose{line-height:1.78;font-size:.98rem}
+  .prose>*:first-child{margin-top:0}
+  .prose h1{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:2.15rem;letter-spacing:-.01em;line-height:1.15;margin:0 0 1.1rem}
+  .prose h2{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:1.55rem;margin:2.4rem 0 .7rem;padding-top:1.2rem;border-top:1px solid rgba(148,163,184,.15)}
+  .prose h3{font-weight:600;font-size:1.1rem;margin:1.8rem 0 .5rem}
   .prose p{margin:.7rem 0}
   .prose a{color:#0891b2;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
   .dark .prose a{color:#22d3ee}
   .prose ul,.prose ol{margin:.7rem 0 .7rem 1.4rem}
   .prose ul{list-style:disc}.prose ol{list-style:decimal}
-  .prose li{margin:.25rem 0}
-  .prose blockquote{border-left:3px solid rgba(34,211,238,.5);padding:.1rem 0 .1rem 1rem;color:#64718a;margin:.9rem 0}
+  .prose li{margin:.3rem 0}
+  .prose blockquote{border-left:3px solid rgba(34,211,238,.5);padding:.1rem 0 .1rem 1rem;color:#64718a;margin:1rem 0}
   .dark .prose blockquote{color:#93a0b5}
-  .prose code{font-family:'Geist Mono',monospace;font-size:.86em;background:rgba(100,116,139,.12);border-radius:.3rem;padding:.1em .35em}
-  .dark .prose code{background:rgba(148,163,184,.12)}
-  .prose pre{background:#0d1119;color:#e0e5ee;border:1px solid #222838;border-radius:.8rem;padding:1rem 1.1rem;overflow-x:auto;margin:.9rem 0}
-  .prose pre code{background:none;padding:0;font-size:.85rem}
-  .prose table{border-collapse:collapse;margin:1rem 0;width:100%;font-size:.9rem;display:block;overflow-x:auto}
-  .prose th,.prose td{border:1px solid #cbd3e1;padding:.45rem .7rem;text-align:left;vertical-align:top}
+  .prose code{font-family:'Geist Mono',monospace;font-size:.85em;background:rgba(100,116,139,.12);border-radius:.3rem;padding:.12em .38em}
+  .dark .prose code{background:rgba(148,163,184,.13)}
+  .prose pre{background:#0d1119;color:#e0e5ee;border:1px solid #222838;border-radius:.8rem;padding:1rem 1.15rem;overflow-x:auto;margin:1rem 0}
+  .prose pre code{background:none;padding:0;font-size:.84rem}
+  .prose table{border-collapse:collapse;margin:1.1rem 0;width:100%;font-size:.9rem;display:block;overflow-x:auto}
+  .prose th,.prose td{border:1px solid #cbd3e1;padding:.5rem .75rem;text-align:left;vertical-align:top}
   .dark .prose th,.dark .prose td{border-color:#353d50}
-  .prose th{background:rgba(100,116,139,.08)}
+  .prose th{background:rgba(100,116,139,.08);font-weight:600}
   .prose img{max-width:100%;border-radius:.7rem}
-  .prose hr{border:none;border-top:1px solid #cbd3e1;margin:1.6rem 0}
+  .prose hr{border:none;border-top:1px solid #cbd3e1;margin:1.8rem 0}
   .dark .prose hr{border-top-color:#353d50}
-  .prose .mermaid{background:transparent;display:flex;justify-content:center;margin:1rem 0;overflow-x:auto}
+  .prose .mermaid{background:transparent;display:flex;justify-content:center;margin:1.2rem 0;overflow-x:auto}
 </style>
 </head>
 <body class="min-h-screen bg-[#f6f8fc] text-zinc-900 antialiased dark:bg-[#0a0e1a] dark:text-zinc-100">
@@ -53,7 +53,7 @@
   <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
     <div class="flex items-baseline gap-3">
       <a href="/" class="serif text-xl leading-none tracking-tight">Lethe</a>
-      <span class="mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">learn</span>
+      <span class="mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">docs</span>
     </div>
     <div class="flex items-center gap-2">
       <button id="theme" aria-label="Toggle theme" class="grid h-8 w-8 place-items-center rounded-md border border-zinc-300 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900">
@@ -68,19 +68,21 @@
   </div>
 </header>
 
-<div class="mx-auto flex max-w-6xl gap-8 px-5 py-8">
-  <nav id="side" class="hidden w-72 shrink-0 md:block">
-    <div class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2">
-      <p class="mono mb-3 text-[10px] uppercase tracking-[0.22em] text-zinc-400">the project, explained</p>
-      <div id="toc" class="space-y-4 text-sm"></div>
+<div class="mx-auto flex max-w-6xl gap-10 px-5 py-8">
+  <nav id="side" class="hidden w-64 shrink-0 md:block">
+    <div class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-3">
+      <div id="toc" class="space-y-5 text-sm"></div>
     </div>
   </nav>
   <main class="min-w-0 flex-1">
-    <article id="doc" class="prose max-w-3xl">
-      <p class="text-zinc-400">loading…</p>
-    </article>
-    <div class="mt-10 border-t border-zinc-200 pt-4 text-xs text-zinc-400 dark:border-zinc-800">
-      These chapters live in <a class="underline decoration-dotted underline-offset-2" href="https://github.com/vinayaksonthalia/lethe/tree/main/learning" target="_blank" rel="noopener">learning/</a> in the repo — written alongside the build and verified against the running app.
+    <div class="mb-4 md:hidden">
+      <select id="mobileNav" aria-label="Choose a chapter" class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-[#141b2b]"></select>
+    </div>
+    <p id="crumb" class="mono mb-2 text-[10px] uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-400"></p>
+    <article id="doc" class="prose max-w-3xl"><p class="text-zinc-400">loading…</p></article>
+    <div id="pager" class="mt-12 flex max-w-3xl items-stretch justify-between gap-3"></div>
+    <div class="mt-8 max-w-3xl border-t border-zinc-200 pt-4 text-xs text-zinc-400 dark:border-zinc-800">
+      Written alongside the build and verified against the running app — the same chapters live in <a class="underline decoration-dotted underline-offset-2" href="https://github.com/vinayaksonthalia/lethe/tree/main/learning" target="_blank" rel="noopener">learning/</a> in the repo.
     </div>
   </main>
 </div>
@@ -93,30 +95,34 @@
  mermaid.initialize({startOnLoad:false,securityLevel:'loose',theme:root.classList.contains('dark')?'dark':'neutral'});
  marked.setOptions({gfm:true,breaks:false});
 
- let DOCS=[];
- function groupOf(p){const i=p.indexOf('/');return i===-1?'overview':p.slice(0,i);}
- function currentPath(){const h=decodeURIComponent(location.hash.replace(/^#/,''));return h||'README.md';}
+ const DEFAULT_DOC='00-the-big-picture/what-is-this.md';
+ let SECTIONS=[],FLAT=[];
+ const meta=p=>FLAT.find(d=>d.path===p);
+ function currentPath(){const h=decodeURIComponent(location.hash.replace(/^#/,''));return h||DEFAULT_DOC;}
 
  async function loadIndex(){
-   const j=await(await fetch('/learn/index.json')).json();DOCS=j.docs||[];
-   const groups={};
-   DOCS.forEach(d=>{(groups[groupOf(d.path)]=groups[groupOf(d.path)]||[]).push(d);});
+   const j=await(await fetch('/learn/index.json')).json();SECTIONS=j.sections||[];
+   FLAT=[];SECTIONS.forEach(s=>s.items.forEach(it=>FLAT.push({...it,section:s.label})));
    const toc=document.getElementById('toc');toc.innerHTML='';
-   Object.keys(groups).sort((a,b)=>a==='overview'?-1:b==='overview'?1:a.localeCompare(b)).forEach(g=>{
+   const mob=document.getElementById('mobileNav');mob.innerHTML='';
+   SECTIONS.forEach(s=>{
      const box=document.createElement('div');
-     const label=g==='overview'?'start here':g.replace(/^\d+-/,'').replace(/-/g,' ');
-     box.innerHTML='<p class="mono mb-1 text-[10px] uppercase tracking-wider text-zinc-400">'+label+'</p>';
-     const ul=document.createElement('ul');ul.className='space-y-0.5';
-     groups[g].forEach(d=>{
+     box.innerHTML='<p class="mono mb-1.5 text-[10px] uppercase tracking-[0.18em] text-zinc-400">'+s.label+'</p>';
+     const ul=document.createElement('ul');ul.className='space-y-0.5 border-l border-zinc-200 dark:border-zinc-800';
+     s.items.forEach(d=>{
        const li=document.createElement('li');
        const a=document.createElement('a');
        a.href='#'+d.path;a.dataset.path=d.path;
-       a.className='block rounded-md px-2 py-1 text-[13px] leading-snug text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100';
+       a.className='-ml-px block border-l-2 border-transparent py-1 pl-3 text-[13px] leading-snug text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100';
        a.textContent=d.title;
        li.appendChild(a);ul.appendChild(li);
      });
      box.appendChild(ul);toc.appendChild(box);
+     const og=document.createElement('optgroup');og.label=s.label;
+     s.items.forEach(d=>{const o=document.createElement('option');o.value=d.path;o.textContent=d.title;og.appendChild(o);});
+     mob.appendChild(og);
    });
+   mob.onchange=()=>{location.hash=mob.value;};
    markActive();
  }
 
@@ -124,18 +130,34 @@
    const cur=currentPath();
    document.querySelectorAll('#toc a').forEach(a=>{
      const on=a.dataset.path===cur;
-     a.classList.toggle('bg-cyan-500/10',on);a.classList.toggle('text-cyan-700',on);
+     a.classList.toggle('border-cyan-500',on);a.classList.toggle('text-cyan-700',on);
      a.classList.toggle('dark:text-cyan-300',on);a.classList.toggle('font-medium',on);
+     if(on)a.classList.remove('border-transparent');else a.classList.add('border-transparent');
    });
+   const mob=document.getElementById('mobileNav');if(mob&&mob.value!==cur)mob.value=cur;
  }
 
  function renderMermaid(){
    mermaid.initialize({startOnLoad:false,securityLevel:'loose',theme:root.classList.contains('dark')?'dark':'neutral'});
-   document.querySelectorAll('#doc pre code.language-mermaid').forEach((code,i)=>{
+   document.querySelectorAll('#doc pre code.language-mermaid').forEach(code=>{
      const holder=document.createElement('div');holder.className='mermaid';holder.textContent=code.textContent;
      code.closest('pre').replaceWith(holder);
    });
    try{mermaid.run({querySelector:'#doc .mermaid'});}catch(e){}
+ }
+
+ function renderPager(p){
+   const i=FLAT.findIndex(d=>d.path===p);
+   const box=document.getElementById('pager');box.innerHTML='';
+   const mk=(d,side)=>{
+     const a=document.createElement('a');a.href='#'+d.path;
+     a.className='group flex-1 rounded-xl border border-zinc-200 p-3.5 transition hover:border-cyan-500/50 dark:border-zinc-800 '+(side==='next'?'text-right':'');
+     a.innerHTML='<p class="mono text-[10px] uppercase tracking-wider text-zinc-400">'+(side==='next'?'Next':'Previous')+'</p>'+
+       '<p class="mt-0.5 text-sm font-medium text-zinc-700 transition group-hover:text-cyan-700 dark:text-zinc-200 dark:group-hover:text-cyan-300">'+d.title+'</p>';
+     return a;
+   };
+   if(i>0)box.appendChild(mk(FLAT[i-1],'prev'));else box.appendChild(document.createElement('span'));
+   if(i>=0&&i<FLAT.length-1)box.appendChild(mk(FLAT[i+1],'next'));
  }
 
  async function loadDoc(){
@@ -146,7 +168,6 @@
      const r=await fetch('/learn/raw/'+p.split('/').map(encodeURIComponent).join('/'));
      if(!r.ok){el.innerHTML='<p class="text-zinc-400">Chapter not found. Pick one from the list.</p>';return;}
      el.innerHTML=marked.parse(await r.text());
-     // relative .md links between chapters stay inside the viewer
      el.querySelectorAll('a[href]').forEach(a=>{
        const href=a.getAttribute('href')||'';
        if(/^https?:/i.test(href))a.setAttribute('target','_blank');
@@ -156,7 +177,10 @@
          a.setAttribute('href','#'+base.join('/').split('#')[0]);
        }
      });
-     renderMermaid();window.scrollTo(0,0);markActive();
+     const m=meta(p);
+     document.getElementById('crumb').textContent=m?m.section:'';
+     document.title=(m?m.title+' — ':'')+'Lethe Docs';
+     renderPager(p);renderMermaid();window.scrollTo(0,0);markActive();
    }catch(e){el.innerHTML='<p class="text-zinc-400">Could not load this chapter.</p>';}
  }
 

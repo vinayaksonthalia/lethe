@@ -1550,21 +1550,63 @@ def _learn_files():
     return out
 
 
+# Curated docs navigation — deliberate reading order + clean titles (the raw folder walk stays as a
+# fallback so an unlisted chapter is still reachable, just not in the nav).
+_LEARN_NAV = [
+    ("Getting started", [
+        ("00-the-big-picture/what-is-this.md", "Introduction"),
+        ("00-the-big-picture/the-problem-static-memory-rots.md", "The problem: memory rots"),
+        ("00-the-big-picture/what-we-built.md", "What Lethe is"),
+        ("06-the-product-now.md", "Every feature, mapped"),
+    ]),
+    ("How it works", [
+        ("01-how-it-works/00-overview-the-pipeline.md", "The pipeline, end to end"),
+        ("01-how-it-works/01-ingest-messy-docs-to-graph.md", "Ingest: prose to graph"),
+        ("01-how-it-works/02-entities-and-relationships.md", "Entities & relationships"),
+        ("01-how-it-works/03-graph-and-vectors-hybrid.md", "Graph + vectors, together"),
+        ("01-how-it-works/04-embeddings-and-meaning-space.md", "Embeddings & meaning space"),
+        ("01-how-it-works/05-retrieval-graph-completion.md", "Retrieval: graph completion"),
+        ("01-how-it-works/06-the-llm-is-the-combiner.md", "The LLM is the combiner"),
+        ("01-how-it-works/07-the-forget-hero.md", "Forget: the hard delete"),
+        ("01-how-it-works/08-the-same-question-flip.md", "The same-question flip"),
+    ]),
+    ("Cognee deep dive", [
+        ("02-cognee-deep-dive/what-is-cognee.md", "What is Cognee"),
+        ("02-cognee-deep-dive/why-cognee-not-just-rag.md", "Why not just RAG"),
+        ("02-cognee-deep-dive/the-cognee-api-we-use.md", "The Cognee API we use"),
+        ("02-cognee-deep-dive/config-and-the-self-hosted-stack.md", "Config & the self-hosted stack"),
+        ("07-cognee-capability-audit.md", "Capability audit (what we skip, and why)"),
+    ]),
+    ("The stack", [
+        ("03-the-tech-stack/the-whole-stack.md", "The whole stack"),
+        ("03-the-tech-stack/the-triage-prompt-and-prompt-leverage.md", "The triage prompt"),
+        ("03-the-tech-stack/determinism-and-the-golden-snapshot.md", "Determinism & the golden snapshot"),
+        ("08-mcp-server.md", "The MCP server"),
+        ("running-cognee-locally.md", "Running Cognee locally"),
+    ]),
+    ("The research story", [
+        ("05-the-research-story/what-we-tested-and-killed.md", "What we tested — and killed"),
+        ("05-the-research-story/the-debugging-saga-and-lessons.md", "The debugging saga"),
+        ("00-the-big-picture/is-the-research-done.md", "Is the research done?"),
+    ]),
+    ("Honesty", [
+        ("04-judge-and-learner-qa/honest-limits-what-we-dont-claim.md", "Honest limits"),
+        ("04-judge-and-learner-qa/judge-questions-answered.md", "Hard questions, answered"),
+        ("04-judge-and-learner-qa/newbie-glossary.md", "Glossary"),
+    ]),
+]
+
+
 @app.get("/learn/index.json")
 async def learn_index():
-    docs = []
-    for rel in _learn_files():
-        title = os.path.splitext(os.path.basename(rel))[0].replace("-", " ")
-        try:
-            with open(os.path.join(_LEARN_DIR, rel), encoding="utf-8") as f:
-                for line in f:
-                    if line.startswith("#"):
-                        title = line.lstrip("#").strip()
-                        break
-        except Exception:
-            pass
-        docs.append({"path": rel, "title": title})
-    return {"docs": docs}
+    listed = {p for _, items in _LEARN_NAV for p, _ in items}
+    sections = [{"label": label, "items": [{"path": p, "title": t} for p, t in items]}
+                for label, items in _LEARN_NAV]
+    extras = [rel for rel in _learn_files() if rel not in listed and rel != "README.md"]
+    if extras:
+        sections.append({"label": "More", "items": [
+            {"path": rel, "title": os.path.splitext(os.path.basename(rel))[0].replace("-", " ")} for rel in extras]})
+    return {"sections": sections}
 
 
 @app.get("/learn/raw/{doc_path:path}")
