@@ -164,17 +164,7 @@ And on top of the loop, a **memory-hygiene layer** that's genuinely ahead of the
 - **Detection → action** — aging findings have a one-click **"Mark reviewed"** that refreshes the date *and* lands on the memory timeline. It's a workflow, not just a report.
 - **Memory timeline** — a durable audit log of everything learned, reviewed, and forgotten — and *when*. Every forget lands here with its receipt. (The GDPR / right-to-be-forgotten angle: *prove what you forgot, and when.*)
 
-The three close a loop most "AI memory" never does — they don't just *store*, they **keep memory honest**:
-
-```mermaid
-flowchart LR
-    D["DETECT<br/>stale refs · contradictions · aging<br/>(2 free, 1 bounded-LLM)"]
-    D --> A["ACT<br/>mark reviewed · decommission/forget"]
-    A --> R["RECORD<br/>memory timeline + receipt"]
-    R -->|"keeps the graph trustworthy"| D
-    style A fill:#1d2b3a,color:#cfe6ff
-    style R fill:#13241a,color:#a9e6c0
-```
+Together they close the loop most "AI memory" never does: **detect → act → record** — the graph doesn't just store, it stays honest.
 
 ### Two layers of forgetting: hard delete *and* soft decay
 
@@ -206,7 +196,7 @@ flowchart LR
 | Area | What you get |
 |---|---|
 | **Triage chat** | Graph-grounded answers **streamed token-by-token** with clickable **source citations**; multi-turn context; persistent per-workspace threads; honest "not documented" on off-domain questions (no hallucination); 60s timeout + Retry so a stalled model never freezes the chat. |
-| **Proof of Forgetting** | Decommission → premium confirm → measured receipt (docs / nodes / edges removed) → live re-query proof. |
+| **Proof of Forgetting** | Decommission → confirm → measured receipt (docs / nodes / edges removed) → live re-query proof. |
 | **Curation** | Stale-reference + contradiction + aging scans, each labeled by token cost; the view opens as a live dashboard (free scans auto-run, the paid one stays opt-in). |
 | **Memory timeline** | Chronological audit log of add / review / forget events; forgets carry their receipt. |
 | **Knowledge graph** | Obsidian-style, degree-sized, hover-to-trace; **click a node** for a plain-text panel of its real connections (`legacy-cache → caused → memory eviction storm → impacted → login system`). |
@@ -253,7 +243,7 @@ cp .env.example .env      # then paste a Groq key into LLM_API_KEY
 
 **No key yet?** The app still starts and the prebuilt graph loads: **Systems**, **Graph**, **Timeline**, and the free **Curation** scans all work offline. Only the parts that call the model — **Triage chat**, **Upload/ingest**, and the forget re-query proof — need a key.
 
-**The demo beat:** in the dashboard, ask *"If auth-service latency is high, what should I check?"* → decommission **`legacy-cache`** (watch the receipt) → re-type the **same** question → the answer flips to *"the session-store connection pool and its hit rate."* Reset with `scripts/reset_demo.py` to do it again.
+Then run [the demo beat](#the-hero-the-same-question-before-and-after) — ask, decommission `legacy-cache`, ask again. Reset any time with `scripts/reset_demo.py`.
 
 ---
 
