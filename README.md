@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/screenshots/banner.png" alt="Lethe — on-call memory that forgets the stale stuff" width="100%">
+<img src="docs/screenshots/banner.gif" alt="Lethe — on-call memory that forgets, and proves it" width="100%">
 
 It remembers your team's runbooks across every session, answers on-call questions from a knowledge **graph** (not a pile of disconnected facts), and — the part almost everyone skips — it can **forget** a decommissioned system so it never gives 3 a.m. advice about something you killed last quarter.
 
@@ -279,41 +279,33 @@ Details in [`lethe-plugin/README.md`](lethe-plugin/README.md).
 
 ## The research story (why we trust the hero)
 
-We didn't assume `forget` was the differentiator — we **gauntleted three of them** against plain RAG at temperature 0, and reported the losers honestly:
+We didn't assume `forget` was the differentiator — we tested three Cognee capabilities against plain RAG at temperature 0 and reported the losers: **multi-hop** tied at demo scale (*killed*), **self-improvement** didn't beat the baseline (*demoted*), and **`forget` held** — verified structurally (zero residue in retrieved context) and behaviorally (20/20, plus adversarial probes).
 
-- **Multi-hop lookup** — ties RAG at demo scale. *Killed.*
-- **Self-improvement / blast-radius** — doesn't reliably beat the temp-0 baseline. *Demoted.*
-- **`forget`** — the one that held. Verified *structurally* (0 residue in retrieved context after a forget) and *behaviorally* (20/20, plus adversarial probes), then re-confirmed through the full app and the MCP path.
+Then we measured forgetting itself — **twice** — with an independent blind judge: a *different model family* scores every answer 0–2 against known-correct guidance. It grades **correctness, not word-absence** (our first benchmark graded word-absence, which is circular, so we threw it out).
 
-**And we measured it — honestly (the "Stale-Advice Eradication" benchmark).** [`research/forget_correctness_benchmark.py`](research/forget_correctness_benchmark.py) runs on an **18-document / 17-system** corpus answered by **`llama-3.3-70b`** (the demo model), decommissions three systems (`legacy-cache`, `email-relay`, `image-resizer`), and re-asks — then an **independent model of a different family (`gemini-2.5-flash`), blind to before/after, scores each answer 0–2** against the known-correct current guidance. It scores **correctness, not the mere absence of a deleted word** — an earlier benchmark did the latter, which is circular (deleting a doc trivially removes its name), so we threw it out.
+| Judged 0–2, before → after forget | Run 1 · 18 docs, 3 forgets | Run 2 · 27 docs, 6 forgets |
+|---|---|---|
+| **Update** — stale advice gets fixed | 1.0 → **2.0** | 1.5 → **2.0** |
+| **Control** — unrelated answers stay right | 2.0 → 2.0 | 2.0 → 2.0 |
+| **Abstention** — says *"not documented"* | 0.0 → 0.67 | 0.0 → 1.0 |
+| **Index-level deletion proof** | ✓ 3/3 | ✓ 6/6 |
 
-**The result** (independent blind judge, 0–2 scale):
+Run 1: system `llama-3.3-70b`, judge `gemini-2.5-flash`. Run 2 — a full replication with a different pair — system `zai-glm-4.7` (the live demo's model), judge `gpt-oss-120b`. Per-question data: [`results.json`](research/forget_correctness_results.json) · [`results_n6.json`](research/forget_correctness_results_n6.json); the landing's *"Forgetting, proven"* panel serves run 1 live. One rate-limit-corrupted attempt was **discarded, not published** — the fix is in the [benchmark script](research/forget_correctness_benchmark.py).
 
-| Dimension | Before → After |
-|---|---|
-| **Update** — does stale advice get fixed? | **1.0 → 2.0** |
-| **Abstention** — does it correctly say *"not documented"* about a forgotten system? | **0.0 → 0.67** |
-| **Control** — do unrelated answers stay correct (surgical)? | **2.0 → 2.0** |
-| **Retrieval-layer deletion** — are the forgotten doc's chunks gone from the index? | **✓ verified** (3/3 systems) |
-
-Forgetting fixed the stale advice (update 1.0 → 2.0) without touching unrelated answers (control held at 2.0). Abstention rose from 0 to 0.67: the hero `legacy-cache` cleanly answers *"not documented"* after forget, while `email-relay`/`image-resizer` instead **redirect to their replacements** — a nuance we report rather than hide. And beyond the answer text, a chunk-level search proves the forgotten documents are **gone from the retrieval index**, not merely rephrased around. Numbers live in [`research/forget_correctness_results.json`](research/forget_correctness_results.json) and on the landing's *"Forgetting, proven"* panel (`GET /evidence`). It's a run-once, capture-the-result artifact (the blind judge is LLM-quota-heavy).
-
-**Replicated at 2× scale with a different model pair.** We re-ran the same protocol on a **27-document / 18-system corpus with six decommissions**, with a completely different pairing — system under test `zai-glm-4.7` (the model the live demo runs), judge `gpt-oss-120b`, both families different from run one. Result: update **1.5 → 2.0** (the stronger model partially resists stale bait even before the forget — an honest finding, and forgetting still lifts it to perfect), control held **2.0 → 2.0**, abstention rose **0.0 → 1.0**, and the chunk-level deletion proof passed **6/6 systems**. Full data in [`research/forget_correctness_results_n6.json`](research/forget_correctness_results_n6.json). One failed attempt along the way (provider rate-limiting silently dropped half the corpus mid-ingest) was **discarded, not published** — the fix (batched cognify) is in the benchmark script.
-
-That honesty is deliberate: the judging criteria reward craft and depth, not a fragile "we beat RAG" claim. The full story is in [`learning/05-the-research-story/`](learning/05-the-research-story/what-we-tested-and-killed.md).
+Nuances we report rather than hide: some forgotten systems *redirect to their replacement* instead of abstaining, and the stronger model partially resists stale bait even before the forget. Full story: [`learning/05`](learning/05-the-research-story/what-we-tested-and-killed.md).
 
 ---
 
 ## Honest limits (what we don't claim)
 
-- **Not "the only ones who can forget."** mem0 ships a forgetting policy too. Our defensibility is the *product*: entity-level, **verifiable**, self-hosted, workflow-wired forgetting + proactive curation.
-- **Auth + rate limiting are opt-in (off by default).** Locally the routes are open — correct for a 127.0.0.1 demo. For a private deploy, set `LETHE_AUTH_TOKEN` (every API route then requires `Authorization: Bearer <token>`; the web UI and MCP server attach it automatically) and `LETHE_RATE_LIMIT="N/S"` to throttle the mutating/quota-spending routes per IP. The **hosted demo** runs a third, explicit mode — `LETHE_PUBLIC_DEMO=1`: anonymous access, rate-limited, and the model config **locked** (a visitor can't rewire the shared instance). All are single-instance guards, not multi-user RBAC — **single-tenant by design** (see below).
-- **Single-tenant by design.** One instance per team — like early Grafana or a self-hosted Sentry. Workspaces isolate knowledge bases (each its own Cognee dataset + graph); the opt-in bearer token gates a shared deploy. Org-level accounts and RBAC are an enterprise-roadmap layer on top, not a missing bolt — the memory primitive is the product, and it's deliberately deployable as a private box before it's a SaaS.
-- **Chat threads are client-side today.** History/threads live in the browser (`localStorage`), so they're per-device, not synced. That's fine for a single operator at a terminal; server-side sessions are roadmap (and would ride on the same auth layer).
-- **Citations are provenance by name-match**, not a scored retrieval trace — they tell you *which runbooks the answer drew on*, honestly, without claiming a ranking they don't have.
-- **The benchmark is directional, not a p-value.** Two blind-judged runs — 3 decommissions/18 docs, replicated at 6 decommissions/27 docs with a different model pair — enough to show the effect is real, surgical, and holds across models; not enough to call it "proven at scale." We say so.
-- **Pinned to Cognee 1.1.3.** 1.2.x's structured graph build fails with our weak local-friendly LLM (empty graph). The path forward — a tight custom `graph_model` to shrink the structured-output target — is scoped in [`learning/07`](learning/07-cognee-capability-audit.md).
-- **One soft edge:** a question about a *facet* of a system that *has* a runbook can occasionally over-point to that runbook instead of admitting the facet is undocumented. It's an LLM limit, not prompt-fixable; the demo is hero-driven so it's a documented residual, not a blocker.
+- **Not "the only ones who can forget."** mem0 ships a forgetting policy too — ours is the *product*: entity-level, verifiable, self-hosted, workflow-wired.
+- **Security modes are explicit opt-ins.** Local runs open (loopback only, fail-closed to remote); `LETHE_AUTH_TOKEN` gates a private deploy; `LETHE_PUBLIC_DEMO=1` runs the hosted demo anonymous + rate-limited with the model config locked. Single-instance guards, not RBAC.
+- **Single-tenant by design** — one instance per team, early-Grafana style. Workspaces isolate graphs; org accounts/RBAC are the enterprise layer on top, not a missing bolt.
+- **Chat threads are client-side** (`localStorage`, per-device). Server-side sessions are roadmap.
+- **Citations are name-match provenance**, not a scored retrieval trace — honest about *which* runbooks were used, no invented ranking.
+- **The benchmark is directional, not a p-value** — two blind-judged runs (3 forgets/18 docs, replicated at 6/27 with a different model pair): real and surgical, not "proven at scale."
+- **Pinned to Cognee 1.1.3.** 1.2.x's structured graph build needs a tighter custom `graph_model` first — scoped in [`learning/07`](learning/07-cognee-capability-audit.md).
+- **One soft edge:** a question about an undocumented *facet* of a documented system can over-point to its runbook instead of abstaining. An LLM limit; documented, not hidden.
 
 ---
 
@@ -350,7 +342,16 @@ The `learning/` folder isn't an afterthought — it's verified against the runni
 
 ## Stack
 
-**Cognee 1.1.3** (graph + vector memory) · **Kùzu** (graph) · **LanceDB** (vectors) · **fastembed** `bge-small-en-v1.5` (local embeddings) · **FastAPI** + **uvicorn** · **Tailwind** (browser CDN) + Instrument Serif / Geist Mono · **MCP** (FastMCP) · LLM via any OpenAI-compatible provider or local **Ollama**.
+| Layer | Choice | Why |
+|---|---|---|
+| Memory engine | **Cognee 1.1.3** | the full lifecycle in one API — `add` · `cognify` · `search` · `forget` |
+| Graph store | **Kùzu** | embedded property graph; the incident world as typed nodes + edges |
+| Vector store | **LanceDB** | file-based chunk embeddings — zero servers to run |
+| Embeddings | **fastembed** `bge-small-en-v1.5` | local, 384-dim, $0 — nothing leaves the box |
+| API & app | **FastAPI** + uvicorn | one process; page shells in `templates/` |
+| UI | **Tailwind** + Instrument Serif / Geist | editorial cool-blue, no build step |
+| Agent surface | **MCP** (FastMCP) | 10 tools callable from Claude Code / Cursor |
+| LLM | any OpenAI-compatible or **Ollama** | swappable at runtime; the live demo runs Cerebras `zai-glm-4.7` |
 
 <div align="center">
 
