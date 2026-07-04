@@ -1,0 +1,339 @@
+{
+  "generated_at": "2026-07-04T18:44:47",
+  "system_model": "openai/zai-glm-4.7",
+  "judge_model": "gpt-oss-120b",
+  "corpus_docs": 27,
+  "systems": 24,
+  "decommissioned": [
+    "legacy-cache",
+    "email-relay",
+    "image-resizer",
+    "old-logger",
+    "ftp-dropzone",
+    "cron-billing"
+  ],
+  "docs_forgotten": 9,
+  "stale_correctness_before": 1.5,
+  "stale_correctness_after": 2.0,
+  "control_correctness_before": 2.0,
+  "control_correctness_after": 2.0,
+  "abstention_correctness_before": 0.0,
+  "abstention_correctness_after": 1.0,
+  "retrieval_proof": [
+    {
+      "system": "legacy-cache",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "email-relay",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "image-resizer",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "old-logger",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "ftp-dropzone",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    },
+    {
+      "system": "cron-billing",
+      "own_chunk_before": true,
+      "own_chunk_after": false
+    }
+  ],
+  "retrieval_proof_pass": true,
+  "before": [
+    {
+      "q": "The auth-service latency is high \u2014 what should I check first?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "Check the legacy-cache first because it sits in front of the auth-service session reads. To recover, flush and resize the legacy-cache cluster.",
+      "score": 0
+    },
+    {
+      "q": "Customer notification emails are failing to send \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "Check the cloud-mailer status and the notification queue depth because the notification-service delivers email through the cloud-mailer. Also check the cloud-mailer API status page and bounce rate. Additionally, restart the email-relay daemon and clear its outbound spool since it handles all outgoing platform email.",
+      "score": null
+    },
+    {
+      "q": "Product images are loading slowly on the storefront \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "Check the image-resizer system and restart its workers to clear a backlog, as it resizes images before serving. Check the cdn-transform edge workers and their queue, as they resize and optimize images at the edge. If there are cache-miss storms, check the CDN origin health because the CDN serves images to the storefront.",
+      "score": "ERR:litellm.RateLimitError: RateLimitError: OpenAIException - We're experiencing high traffic right now! Please try again soon."
+    },
+    {
+      "q": "What is in the auth-service read path for session state?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "The auth-service reads session state directly from the primary session-store. If latency is high, check the session-store connection pool and hit rate.",
+      "score": 2
+    },
+    {
+      "q": "How does the platform deliver outgoing customer email?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "The notification-service sends customer emails and delivers all email through the cloud-mailer.",
+      "score": 2
+    },
+    {
+      "q": "What service resizes and optimizes product images?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "The cdn-transform service resizes and optimizes product images at the edge for the cdn. If product images load slowly or look wrong, check the cdn-transform edge workers and their queue.",
+      "score": 2
+    },
+    {
+      "q": "Who owns the payments-service?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The payments-service is owned by the payments team.",
+      "score": 2
+    },
+    {
+      "q": "What must the payments-service call to validate a login token?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Verify the payments-service calls the auth-service to validate the login token, as the runbook specifies this call is required for validation.",
+      "score": 2
+    },
+    {
+      "q": "What powers product search?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Check the search-index system, as it powers product search.",
+      "score": 2
+    },
+    {
+      "q": "What does the api-gateway do?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The api-gateway routes all storefront traffic to backend services and enforces rate limits.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the legacy-cache system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "legacy-cache",
+      "answer": "The legacy-cache is a memcached cluster that sits in front of the auth-service session reads. When auth-service latency is high, check the legacy-cache and flush and resize the cluster to recover.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the email-relay system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "email-relay",
+      "answer": "The email-relay is a daemon that handles all outgoing platform email. If notifications are failing to send, restart the email-relay daemon and clear its outbound spool.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the image-resizer system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "image-resizer",
+      "answer": "The image-resizer is a system that resizes product images before they are served. If product images are loading slowly, check the image-resizer and restart the image-resizer workers to clear a backlog.",
+      "score": 0
+    },
+    {
+      "q": "Application logs stopped appearing \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "old-logger",
+      "answer": "Check the log-pipeline collector intake lag and its dead-letter queue because it is the current path for all service logs; also restart the old-logger shipper daemon on each host and clear its journal backlog because it ships every service's logs.",
+      "score": null
+    },
+    {
+      "q": "Partner file uploads are missing \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "ftp-dropzone",
+      "answer": "Check the ftp-dropzone by restarting the daemon and re-scanning its incoming directory because all partner files arrive via the ftp-dropzone. Additionally, check the s3-ingest event notifications and the ingest queue depth because partner uploads arrive through the s3-ingest bucket events.",
+      "score": null
+    },
+    {
+      "q": "Nightly customer invoices did not generate \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "cron-billing",
+      "answer": "Re-run the cron-billing job on the billing host and check its crontab entry. Additionally, check the billing-scheduler run history and its failed-jobs queue.",
+      "score": null
+    },
+    {
+      "q": "Where do analytics dashboards read their tables from?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Analytics dashboards read from analytics tables stored in the data-warehouse.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the old-logger system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "old-logger",
+      "answer": "The old-logger system is a software system that ships logs for every service. Check if application logs have stopped appearing; if they have, restart the old-logger shipper daemon on each host and clear its journal backlog.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the ftp-dropzone system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "ftp-dropzone",
+      "answer": "The ftp-dropzone is the system responsible for receiving partner files. When partner file uploads are missing, check the ftp-dropzone by restarting the ftp-dropzone daemon and re-scanning its incoming directory.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the cron-billing system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "cron-billing",
+      "answer": "The cron-billing system is a scheduled job responsible for billing processes that produces all customer invoices. If nightly invoices did not generate, re-run the cron-billing job on the billing host and check its crontab entry.",
+      "score": "ERR:litellm.RateLimitError: RateLimitError: OpenAIException - We're experiencing high traffic right now! Please try again soon."
+    }
+  ],
+  "after": [
+    {
+      "q": "The auth-service latency is high \u2014 what should I check first?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "Check the session-store connection pool and its hit rate because the auth-service reads session state directly from the session-store.",
+      "score": 2
+    },
+    {
+      "q": "Customer notification emails are failing to send \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "Check the cloud-mailer status, specifically its API status page, because the notification-service delivers all email through it. You should also check the notification queue depth and the cloud-mailer bounce rate.",
+      "score": 2
+    },
+    {
+      "q": "Product images are loading slowly on the storefront \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "Check the cdn-transform edge workers and their queue because the service resizes and optimizes product images at the edge. If there is a cache-miss storm, check origin health as the CDN serves these assets.",
+      "score": 2
+    },
+    {
+      "q": "What is in the auth-service read path for session state?",
+      "kind": "stale",
+      "trap": "legacy-cache",
+      "answer": "The auth-service reads session state directly from the primary session-store. If latency is high, check the session-store connection pool and hit rate.",
+      "score": 2
+    },
+    {
+      "q": "How does the platform deliver outgoing customer email?",
+      "kind": "stale",
+      "trap": "email-relay",
+      "answer": "The notification-service sends customer emails and delivers all email through the cloud-mailer service.",
+      "score": 2
+    },
+    {
+      "q": "What service resizes and optimizes product images?",
+      "kind": "stale",
+      "trap": "image-resizer",
+      "answer": "The cdn-transform service is responsible for resizing and optimizing product images at the edge for the cdn. In cases where images load slowly or appear incorrect, you should check the cdn-transform edge workers and their queue.",
+      "score": 2
+    },
+    {
+      "q": "Who owns the payments-service?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The payments-service is owned by the payments team.",
+      "score": 2
+    },
+    {
+      "q": "What must the payments-service call to validate a login token?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Verify the payments-service calls the auth-service to validate the login token, as the runbook specifies this call is required for validation.",
+      "score": 2
+    },
+    {
+      "q": "What powers product search?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Check the search-index system, as it powers product search.",
+      "score": "ERR:litellm.RateLimitError: RateLimitError: OpenAIException - We're experiencing high traffic right now! Please try again soon."
+    },
+    {
+      "q": "What does the api-gateway do?",
+      "kind": "control",
+      "trap": null,
+      "answer": "The api-gateway routes all storefront traffic to backend services and enforces rate limits.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the legacy-cache system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "legacy-cache",
+      "answer": "It is not documented in the runbooks.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the email-relay system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "email-relay",
+      "answer": "The email delivery is handled by the cloud-mailer, which is the provider for the notification-service. When emails are not being delivered, check the cloud-mailer API status page, bounce rate, and the notification queue depth.",
+      "score": 0
+    },
+    {
+      "q": "Tell me about the image-resizer system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "image-resizer",
+      "answer": "The cdn-transform service resizes and optimizes product images at the edge for the cdn. If product images load slowly or look wrong, check the cdn-transform edge workers and their queue.",
+      "score": 0
+    },
+    {
+      "q": "Application logs stopped appearing \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "old-logger",
+      "answer": "Check the log-pipeline collector intake lag and its dead-letter queue, as the log-pipeline collector is the current path for all service logs.",
+      "score": 2
+    },
+    {
+      "q": "Partner file uploads are missing \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "ftp-dropzone",
+      "answer": "Check the s3-ingest event notifications and the ingest queue depth, as partner file uploads arrive through the s3-ingest bucket events.",
+      "score": 2
+    },
+    {
+      "q": "Nightly customer invoices did not generate \u2014 what should I check?",
+      "kind": "stale",
+      "trap": "cron-billing",
+      "answer": "Check the billing-scheduler run history and the failed-jobs queue. The billing-scheduler service generates all customer invoices on its nightly schedule, so these checks will help identify why the invoices are missing.",
+      "score": "ERR:litellm.RateLimitError: RateLimitError: OpenAIException - We're experiencing high traffic right now! Please try again soon."
+    },
+    {
+      "q": "Where do analytics dashboards read their tables from?",
+      "kind": "control",
+      "trap": null,
+      "answer": "Analytics dashboards read from analytics tables stored in the data-warehouse.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the old-logger system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "old-logger",
+      "answer": "The old-logger system is not documented in the runbooks.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the ftp-dropzone system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "ftp-dropzone",
+      "answer": "The ftp-dropzone system is not documented in the runbooks.",
+      "score": 2
+    },
+    {
+      "q": "Tell me about the cron-billing system \u2014 what is it and what should I check for it?",
+      "kind": "abstention",
+      "trap": "cron-billing",
+      "answer": "The billing-scheduler service generates all customer invoices on a nightly schedule. If invoices are missing, check the billing-scheduler run history and its failed-jobs queue.",
+      "score": 0
+    }
+  ]
+}

@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lethe — on-call memory that forgets, and proves it</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 24' fill='none' stroke='%2322d3ee' stroke-width='2.4' stroke-linecap='round'><path d='M2 12c2.2-4 4.4-4 6.6 0s4.4 4 6.6 0'/><path d='M15.2 12c2.2-4 4.4-4 6.6 0' opacity='.4'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+  @custom-variant dark (&:where(.dark, .dark *));
+  /* Cool blue-tinted neutral palette — same as the app, so landing + app read as one cool blue-gray product. */
+  @theme {
+    --color-zinc-50:#f5f7fa; --color-zinc-100:#eef1f6; --color-zinc-200:#e0e5ee; --color-zinc-300:#cbd3e1;
+    --color-zinc-400:#93a0b5; --color-zinc-500:#64718a; --color-zinc-600:#475066; --color-zinc-700:#353d50;
+    --color-zinc-800:#222838; --color-zinc-900:#161b28; --color-zinc-950:#0d1119;
+    --color-slate-100:#eef1f6; --color-slate-200:#e0e5ee; --color-slate-300:#cbd3e1; --color-slate-400:#93a0b5;
+    --color-slate-500:#64718a; --color-slate-600:#475066; --color-slate-700:#353d50; --color-slate-800:#222838;
+    --color-slate-900:#141a27;
+  }
+  body{font-family:'Geist',system-ui,sans-serif}
+  html{scroll-behavior:smooth;font-size:19px}
+  .serif{font-family:'Instrument Serif','Spectral',Georgia,serif;font-weight:400}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .lx{animation:fadein .35s ease both}
+  #demo{transition:opacity .45s ease}
+  .mono{font-family:'Geist Mono',ui-monospace,monospace}
+  .lc-rail{position:absolute;height:2px;border-radius:2px;background:currentColor}
+  .lc-fill{position:absolute;height:2px;width:0;border-radius:2px;background:linear-gradient(90deg,#22d3ee,#6366f1);box-shadow:0 0 8px rgba(34,211,238,.5);transition:width .1s linear}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #22d3ee;outline-offset:2px;border-radius:5px}
+  .lc-dot{background:#cbd5e1;transition:background .3s ease,box-shadow .3s ease}
+  .dark .lc-dot{background:#334155}
+  .lc-stage.lit .lc-dot{background:#22d3ee;box-shadow:0 0 0 4px rgba(34,211,238,.15)}
+  .lc-dot-hero{position:relative}
+  .lc-dot-hero::after{content:"";position:absolute;inset:0;border-radius:9999px;background:#22d3ee;animation:lcping 2.2s ease-out infinite}
+  @keyframes lcping{0%{transform:scale(1);opacity:.55}70%,100%{transform:scale(2.4);opacity:0}}
+  @media (prefers-reduced-motion:reduce){.lc-dot-hero::after{animation:none}.lethe-mark{animation:none}.wv-f,.wv-b{animation:none}}
+  .wv{position:absolute;top:0;left:0;height:100%;width:200%}
+  .wv-f{animation:wflow 16s linear infinite}
+  .wv-b{animation:wflow 26s linear infinite}
+  @keyframes wflow{to{transform:translateX(-50%)}}
+  @keyframes lshimmer{0%,100%{filter:hue-rotate(0deg)}50%{filter:hue-rotate(-22deg)}}
+  .card{position:relative;background-image:radial-gradient(240px circle at var(--mx,-200px) var(--my,-200px), rgba(34,211,238,.16), transparent 60%);background-color:rgba(255,255,255,.78)}
+  .dark .card{background-color:rgba(14,20,32,.66)}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1)}
+  .reveal.in{opacity:1;transform:none}
+  /* staggered scroll-reveal: a container's children cascade in one by one (--i set per child in JS) */
+  .stg>*{opacity:0;transform:translateY(24px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1),box-shadow .35s ease,border-color .35s ease}
+  .stg.in>*{opacity:1;transform:none;transition-delay:calc(var(--i,0)*80ms)}
+  /* tactile hover-lift on cards (rounded-2xl/3xl only, so flow arrows are excluded) — elevation via shadow+border, no transform conflict with the reveal */
+  .stg.in>.rounded-2xl:hover,.stg.in>.rounded-3xl:hover{transition-delay:0s;box-shadow:0 22px 55px -26px rgba(2,8,20,.6);border-color:rgba(34,211,238,.5)}
+  /* benchmark proof bars grow in on reveal */
+  .evbar-fill{width:0;transition:width 1.05s cubic-bezier(.22,1,.36,1) .15s}
+  @media (prefers-reduced-motion:reduce){.reveal,.stg>*{opacity:1!important;transform:none!important;transition:none}.evbar-fill{transition:none}}
+  /* signature scroll moment — pinned scrollytelling: the forget hero plays out as you scroll */
+  .scrolly{height:260vh}
+  .scrolly-sticky{position:sticky;top:0;display:flex;min-height:100vh;align-items:center;padding:4rem 0}
+  .scrolly.noscroll{height:auto}
+  .scrolly.noscroll .scrolly-sticky{position:static;min-height:0}
+  .ss-el{opacity:0;transform:translateY(12px);transition:opacity .55s cubic-bezier(.22,1,.36,1),transform .55s cubic-bezier(.22,1,.36,1)}
+  .ss-el.show{opacity:1;transform:none}
+  .ss-diss{display:inline-block;transition:opacity .6s ease,transform .6s ease,filter .6s ease}
+  .ss-diss.gone{opacity:0;transform:translateY(8px) scale(.82);filter:blur(5px)}
+  #srail [data-s]{transition:color .35s ease,opacity .35s ease;opacity:.55}
+  #srail [data-s].on{color:#22d3ee;opacity:1}
+  .srail-line{flex:1;height:1px;margin:0 10px;background:currentColor;opacity:.2}
+  #ssQ.reask>div{box-shadow:0 0 0 2px rgba(34,211,238,.55);transition:box-shadow .35s ease}
+  @media (prefers-reduced-motion:reduce){.ss-el,.ss-diss{transition:none}}
+  .grad{background:linear-gradient(90deg,#0891b2,#4f46e5);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+  .dark .grad{background:linear-gradient(90deg,#22d3ee,#6366f1);-webkit-background-clip:text;background-clip:text}
+  .lethe-mark{font-weight:400;line-height:.82;letter-spacing:-.02em;font-size:clamp(5rem,29vw,24rem);margin-bottom:-.06em;background:linear-gradient(180deg,#0891b2 0%,#4f46e5 46%,rgba(79,70,229,0) 88%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:lshimmer 7s ease-in-out infinite}
+  .dark .lethe-mark{background:linear-gradient(180deg,#22d3ee 0%,#6366f1 46%,rgba(99,102,241,0) 88%);-webkit-background-clip:text;background-clip:text}
+  .bg-grid{background-image:radial-gradient(rgba(100,116,139,.13) 1px,transparent 1px);background-size:26px 26px}
+  .dark .bg-grid{background-image:radial-gradient(rgba(148,163,184,.07) 1px,transparent 1px)}
+</style>
+<style>
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.rise{opacity:0;animation:rise .85s cubic-bezier(.22,1,.36,1) forwards}
+@media (prefers-reduced-motion:reduce){.rise{opacity:1;animation:none}}
+@keyframes wwmarq{to{transform:translateX(-50%)}}
+.wwmarq{animation:wwmarq 38s linear infinite}
+.wwwrap:hover .wwmarq{animation-play-state:paused}
+.wwmask{-webkit-mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent);mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent)}
+@media (prefers-reduced-motion:reduce){.wwmarq{animation:none}}
+</style>
+</head>
+<body class="text-slate-900 antialiased dark:text-slate-100">
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-zinc-950 focus:px-4 focus:py-2 focus:text-sm focus:text-white dark:focus:bg-white dark:focus:text-black">Skip to content</a>
+<div aria-hidden="true" class="bg-grid fixed inset-0 -z-10 bg-[#f6f8fc] dark:bg-[#0a0e1a]"></div>
+<div id="flowWave" aria-hidden="true" class="pointer-events-none fixed inset-x-0 bottom-0 -z-10 h-48 overflow-hidden" style="opacity:.14;-webkit-mask-image:linear-gradient(0deg,#000,#000 40%,transparent);mask-image:linear-gradient(0deg,#000,#000 40%,transparent)">
+  <svg class="wv wv-b" viewBox="0 0 1440 90" preserveAspectRatio="none" fill="none"><path d="M0 55 Q120 30 240 55 T480 55 T720 55 T960 55 T1200 55 T1440 55" stroke="#6366f1" stroke-width="2" stroke-opacity=".55" stroke-linecap="round"/></svg>
+  <svg class="wv wv-f" viewBox="0 0 1440 90" preserveAspectRatio="none" fill="none"><path d="M0 44 Q120 20 240 44 T480 44 T720 44 T960 44 T1200 44 T1440 44" stroke="#22d3ee" stroke-width="2" stroke-opacity=".6" stroke-linecap="round"/></svg>
+</div>
+
+<header class="sticky top-0 z-20 border-b border-zinc-300/70 bg-[#f4f7fc]/80 backdrop-blur dark:border-zinc-900 dark:bg-[#0a0e1a]/75">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
+    <div class="flex items-center gap-2">
+      <svg class="lethe-x" width="36" height="18" viewBox="0 0 40 20" fill="none" aria-label="Lethe"><style>@keyframes lxL{to{transform:translateX(-20px)}}@keyframes lxR{to{transform:translateX(20px)}}.lethe-x:hover .lxa{animation:lxL 2.2s linear infinite}.lethe-x:hover .lxb{animation:lxR 2.2s linear infinite}@media(prefers-reduced-motion:reduce){.lethe-x:hover .lxa,.lethe-x:hover .lxb{animation:none}}</style><defs><clipPath id="lxClipB"><rect width="40" height="20"/></clipPath></defs><g clip-path="url(#lxClipB)"><path class="lxb" d="M-20 10 Q-15 18 -10 10 T0 10 T10 10 T20 10 T30 10 T40 10 T50 10 T60 10" stroke="#6366f1" stroke-width="2.6" stroke-linecap="round"/><path class="lxa" d="M-20 10 Q-15 2 -10 10 T0 10 T10 10 T20 10 T30 10 T40 10 T50 10 T60 10" stroke="#22d3ee" stroke-width="2.6" stroke-linecap="round"/></g></svg>
+      <span class="serif text-xl leading-none tracking-tight">Lethe</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="theme" aria-label="Toggle theme" class="grid h-8 w-8 place-items-center rounded-md border border-zinc-300 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900">
+        <svg class="block dark:hidden" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="hidden dark:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>
+      </button>
+      <a href="/app" class="rounded-full bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Launch app</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<section class="mx-auto max-w-4xl px-5 pt-28 pb-20 text-center">
+  <div class="rise mb-6 inline-flex items-center gap-2 rounded-full border border-zinc-300 px-3.5 py-1.5 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400" style="animation-delay:.05s"><span class="h-1.5 w-1.5 rounded-full bg-cyan-400"></span><span class="mono">remember · recall · <span class="text-cyan-600 dark:text-cyan-400">forget()</span></span> · built on Cognee</div>
+  <h1 class="rise serif text-6xl leading-[1.02] tracking-tight sm:text-7xl lg:text-[5.5rem]" style="animation-delay:.12s">On-call memory that<br><span class="grad italic">forgets — and proves&nbsp;it.</span></h1>
+  <p class="rise mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400" style="animation-delay:.24s">It <span class="font-medium text-zinc-900 dark:text-zinc-100">remembers</span> your runbooks across every session — and <span class="font-medium text-zinc-900 dark:text-zinc-100">forgets</span> the systems you kill, so you never chase a dead one at 3&nbsp;a.m.</p>
+  <div class="rise mt-9 flex flex-wrap justify-center gap-3" style="animation-delay:.34s">
+    <a href="/app" class="rounded-full bg-zinc-950 px-7 py-3 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-lg hover:shadow-cyan-500/10 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Launch the app →</a>
+    <a href="#scrolly" class="rounded-xl border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900">Watch it forget &rarr;</a>
+  </div>
+
+</section>
+
+<section class="mx-auto max-w-4xl px-5 pb-24">
+  <div class="reveal overflow-hidden rounded-2xl border border-zinc-300 bg-white/60 shadow-2xl shadow-cyan-500/10 backdrop-blur dark:border-zinc-800 dark:bg-[#0b1018]/60">
+    <div class="flex items-center gap-1.5 border-b border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800/80">
+      <span class="h-2.5 w-2.5 rounded-full bg-red-400/60"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400/60"></span><span class="h-2.5 w-2.5 rounded-full bg-emerald-400/60"></span>
+      <span class="ml-2 mono text-[11px] text-zinc-400">lethe · interactive preview</span>
+      <span class="ml-auto hidden mono text-[10px] text-zinc-400 sm:inline">drag a node · hover to trace · click the red one</span>
+    </div>
+    <div class="relative">
+      <div id="lgraph" class="h-[300px] w-full sm:h-[360px]"></div>
+      <div id="lgrec" class="pointer-events-none absolute left-1/2 top-3 hidden -translate-x-1/2 items-center gap-x-2.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3.5 py-1.5 mono text-[11px] text-cyan-700 backdrop-blur dark:text-cyan-300"><span class="inline-flex items-center gap-1 font-medium"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Forgotten</span><span class="text-cyan-500/40">·</span><span>2 docs</span><span class="text-cyan-500/40">·</span><span>10 nodes</span><span class="text-cyan-500/40">·</span><span>18 edges</span></div>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200/80 px-3.5 py-3 dark:border-zinc-800/80">
+      <span id="lgcap" class="text-xs text-zinc-500 dark:text-zinc-400">An interactive preview of an incident graph — drag a node, or forget the dead one.</span>
+      <button id="lgbtn" class="shrink-0 rounded-lg border border-zinc-300 px-3.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:-translate-y-0.5 hover:border-red-300 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-red-800/70 dark:hover:text-red-400">Decommission legacy-cache</button>
+    </div>
+  </div>
+  <p class="mt-3.5 text-center text-sm text-zinc-500 dark:text-zinc-400">The real thing builds this from your runbooks — <a href="/app" class="underline decoration-dotted underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-400">open the app</a> for the full graph.</p>
+</section>
+
+<section class="mx-auto max-w-3xl px-5 pb-24">
+  <div class="rise mx-auto mt-0 flex max-w-3xl flex-col items-center gap-4" style="animation-delay:.44s">
+    <span class="mono text-[10px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">works with</span>
+    <div class="wwwrap wwmask w-full overflow-hidden">
+      <div class="wwmarq flex w-max items-center">
+        <div id="wwSet" class="flex shrink-0 items-center gap-x-11 pr-11">
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[15px] w-[15px] fill-current" aria-hidden="true"><rect x="1.5" y="9" width="1.7" height="6" rx=".85"/><rect x="4.6" y="6" width="1.7" height="12" rx=".85"/><rect x="7.7" y="3" width="1.7" height="18" rx=".85"/><rect x="10.8" y="8" width="1.7" height="8" rx=".85"/><rect x="13.9" y="1.5" width="1.7" height="21" rx=".85"/><rect x="17" y="7" width="1.7" height="10" rx=".85"/><rect x="20.1" y="4.5" width="1.7" height="15" rx=".85"/></svg><span class="text-[15px] font-semibold lowercase tracking-tight">cognee</span></span>
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-current" aria-hidden="true"><path d="M13.85 0a4.16 4.16 0 0 0-2.95 1.217L1.456 10.66a.835.835 0 0 0 0 1.18.835.835 0 0 0 1.18 0l9.442-9.442a2.49 2.49 0 0 1 3.541 0 2.49 2.49 0 0 1 0 3.541L8.59 12.97l-.1.1a.835.835 0 0 0 0 1.18.835.835 0 0 0 1.18 0l.1-.098 7.03-7.034a2.49 2.49 0 0 1 3.542 0l.049.05a2.49 2.49 0 0 1 0 3.54l-8.54 8.54a1.96 1.96 0 0 0 0 2.755l1.753 1.753a.835.835 0 0 0 1.18 0 .835.835 0 0 0 0-1.18l-1.753-1.753a.266.266 0 0 1 0-.394l8.54-8.54a4.185 4.185 0 0 0 0-5.9l-.05-.05a4.16 4.16 0 0 0-2.95-1.218c-.2 0-.401.02-.6.048a4.17 4.17 0 0 0-1.17-3.552A4.16 4.16 0 0 0 13.85 0m0 3.333a.84.84 0 0 0-.59.245L6.275 10.56a4.186 4.186 0 0 0 0 5.902 4.186 4.186 0 0 0 5.902 0L19.16 9.48a.835.835 0 0 0 0-1.18.835.835 0 0 0-1.18 0l-6.985 6.984a2.49 2.49 0 0 1-3.54 0 2.49 2.49 0 0 1 0-3.54l6.983-6.985a.835.835 0 0 0 0-1.18.84.84 0 0 0-.59-.245"/></svg><span class="text-sm font-medium">MCP</span></span>
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-current" aria-hidden="true"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span class="text-sm font-medium">Claude</span></span>
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-current" aria-hidden="true"><path d="M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z"/></svg><span class="text-sm font-medium">Ollama</span></span>
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-current" aria-hidden="true"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg><span class="text-sm font-medium">OpenAI</span></span>
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-current" aria-hidden="true"><path d="M16.778 1.844v1.919q-.569-.026-1.138-.032-.708-.008-1.415.037c-1.93.126-4.023.728-6.149 2.237-2.911 2.066-2.731 1.95-4.14 2.75-.396.223-1.342.574-2.185.798-.841.225-1.753.333-1.751.333v4.229s.768.108 1.61.333c.842.224 1.789.575 2.185.799 1.41.798 1.228.683 4.14 2.75 2.126 1.509 4.22 2.11 6.148 2.236.88.058 1.716.041 2.555.005v1.918l7.222-4.168-7.222-4.17v2.176c-.86.038-1.611.065-2.278.021-1.364-.09-2.417-.357-3.979-1.465-2.244-1.593-2.866-2.027-3.68-2.508.889-.518 1.449-.906 3.822-2.59 1.56-1.109 2.614-1.377 3.978-1.466.667-.044 1.418-.017 2.278.02v2.176L24 6.014Z"/></svg><span class="text-sm font-medium">OpenRouter</span></span>
+          <span class="flex shrink-0 items-center text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><span class="text-[15px] font-semibold lowercase tracking-tight">groq</span></span>
+          <span class="flex shrink-0 items-center gap-2 text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-current" aria-hidden="true"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg><span class="text-sm font-medium">Cursor</span></span>
+          <span class="flex shrink-0 items-center text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"><span class="text-[15px] font-semibold tracking-tight">Antigravity</span></span>
+        </div>
+        <div id="wwClone" aria-hidden="true" class="flex shrink-0 items-center gap-x-11 pr-11"></div>
+      </div>
+    </div>
+  </div>
+  <script>(function(){var s=document.getElementById('wwSet'),c=document.getElementById('wwClone');if(s&&c){c.innerHTML=s.innerHTML;}})();</script>
+</section>
+
+<section class="mx-auto max-w-2xl px-5 pb-24">
+  <div class="reveal rounded-2xl border border-zinc-300 bg-white/85 p-5 shadow-xl shadow-cyan-500/5 backdrop-blur dark:border-zinc-800 dark:bg-[#141b2b]/70">
+    <div class="mb-4 flex items-center gap-1.5">
+      <span class="h-2.5 w-2.5 rounded-full bg-red-400/70"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400/70"></span><span class="h-2.5 w-2.5 rounded-full bg-emerald-400/70"></span>
+      <span class="ml-2 mono text-xs text-zinc-400">lethe · live</span>
+    </div>
+    <div id="demoLog" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Live demo conversation" class="min-h-[150px] max-h-[340px] space-y-3 overflow-y-auto"></div>
+    <div id="demoChips" class="mt-1 flex flex-wrap gap-2"></div>
+    <form id="demoForm" class="mt-3 flex gap-2">
+      <input id="demoInput" autocomplete="off" placeholder="Ask about the demo systems…" class="flex-1 rounded-xl border border-zinc-300 bg-transparent px-3.5 py-2 text-sm outline-none transition focus:border-cyan-400 dark:border-zinc-700 dark:placeholder:text-zinc-500"/>
+      <button class="shrink-0 rounded-full bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Ask</button>
+    </form>
+  </div>
+  <p class="mt-3 text-center text-xs text-zinc-400">A real query against the live graph — not a script. For the full <span class="text-zinc-600 dark:text-zinc-300">forget</span> flip, <a href="/app" class="underline decoration-dotted underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-400">open the app</a>.</p>
+</section>
+
+<section id="scrolly" class="scrolly relative border-t border-zinc-300 dark:border-zinc-900">
+  <div class="scrolly-sticky">
+    <div class="mx-auto w-full max-w-3xl px-5">
+      <div class="mb-7 text-center">
+        <div class="mono text-xs uppercase tracking-[0.18em] text-zinc-400">the same question, twice</div>
+        <h2 class="serif mt-1 text-4xl tracking-tight sm:text-5xl">Watch it forget.</h2>
+      </div>
+      <div id="srail" class="mx-auto mb-8 flex max-w-lg items-center justify-between mono text-[10px] uppercase tracking-wider text-zinc-400">
+        <span data-s="0">Ask</span><span class="srail-line"></span><span data-s="1">Recommend</span><span class="srail-line"></span><span data-s="2">Forget</span><span class="srail-line"></span><span data-s="3">Ask again</span><span class="srail-line"></span><span data-s="4">Flip</span>
+      </div>
+      <div id="sstage" data-stage="0" class="relative mx-auto max-w-2xl rounded-2xl border border-zinc-300 bg-white/85 p-6 shadow-2xl shadow-cyan-500/10 backdrop-blur dark:border-zinc-800 dark:bg-[#141b2b]/85 sm:p-8">
+        <div id="ssQ" class="ss-el flex justify-end"><div class="max-w-[88%] rounded-2xl rounded-br-md bg-zinc-950 px-4 py-2.5 text-sm text-white dark:bg-white dark:text-black">If auth-service latency is high, what should I check?</div></div>
+        <div class="relative mt-4 min-h-[96px]">
+          <div id="ssA1" class="ss-el absolute inset-x-0 top-0 flex justify-start"><div class="max-w-[92%] rounded-2xl rounded-bl-md border border-zinc-300 bg-white px-4 py-2.5 text-sm leading-relaxed dark:border-zinc-800 dark:bg-[#0e1422]">Check the <span id="ssLC" class="ss-diss mono rounded bg-red-500/10 px-1.5 py-0.5 text-red-600 dark:text-red-400">legacy-cache</span> — flush and resize the cluster to recover.</div></div>
+          <div id="ssA2" class="ss-el absolute inset-x-0 top-0 flex justify-start"><div class="max-w-[92%] rounded-2xl rounded-bl-md border border-cyan-500/40 bg-cyan-500/[0.05] px-4 py-2.5 text-sm leading-relaxed">Check the <span class="mono rounded bg-cyan-500/10 px-1.5 py-0.5 text-cyan-600 dark:text-cyan-400">session-store</span> connection pool and its hit rate.</div></div>
+        </div>
+        <div id="ssRec" class="ss-el mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-2 mono text-[11px] text-cyan-700 dark:text-cyan-300">
+          <span class="inline-flex items-center gap-1 font-medium"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Forgotten</span><span class="text-cyan-500/40">·</span><span>2 documents</span><span class="text-cyan-500/40">·</span><span>10 nodes</span><span class="text-cyan-500/40">·</span><span>18 edges removed</span>
+        </div>
+        <div id="ssCap" class="mt-6 text-center text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">You ask your on-call assistant.</div>
+      </div>
+      <div id="ssHint" class="mt-6 text-center mono text-[10px] uppercase tracking-wider text-zinc-400" style="opacity:.6">scroll &darr;</div>
+    </div>
+  </div>
+</section>
+
+<section class="border-t border-zinc-300 dark:border-zinc-900">
+  <div class="mx-auto max-w-5xl px-5 py-20">
+    <div class="reveal">
+      <div class="mb-1 text-center mono text-xs uppercase tracking-[0.18em] text-zinc-400">the platform</div>
+      <h2 class="serif mb-12 text-center text-3xl tracking-tight sm:text-4xl">Memory you can rely on.</h2>
+      <div class="stg grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg></div><div><h3 class="text-sm font-semibold">Persistent threads</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Every conversation saved — pick it back up later.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></div><div><h3 class="text-sm font-semibold">Isolated workspaces</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Separate knowledge bases, each with its own graph.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><h3 class="text-sm font-semibold">Multi-turn context</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Follow-ups understand what you just asked.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><h3 class="text-sm font-semibold">Runs fully offline</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Point it at a local model — nothing leaves your machine.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div><div><h3 class="text-sm font-semibold">Verifiable deletion</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Hard-delete across graph and vectors — receipt included, re-arm in one click.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="m7 7.5 3.5 8.5M17 7.5 13.5 16M7.2 6.4h9.6"/></svg></div><div><h3 class="text-sm font-semibold">Hybrid memory</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">A knowledge graph and a vector store, working together.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2"/></svg></div><div><h3 class="text-sm font-semibold">Callable over MCP</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Triage and decommission from Claude or Cursor — plus a one-command Claude Code plugin.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></div><div><h3 class="text-sm font-semibold">Citations that open</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Click a chip to read the original runbook — after a forget, it is verifiably gone too.</p></div></div>
+        <div class="flex gap-3.5"><div class="mt-0.5 shrink-0 text-cyan-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div><h3 class="text-sm font-semibold">Memory health, measured</h3><p class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">One deterministic staleness score plus a reversible decay loop — free, 0 tokens.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="border-t border-zinc-300 dark:border-zinc-900">
+  <div class="mx-auto max-w-5xl px-5 py-20">
+    <div class="reveal text-center">
+      <div class="mb-1 mono text-xs uppercase tracking-[0.18em] text-zinc-400">how it works</div>
+      <h2 class="serif text-3xl tracking-tight sm:text-4xl">The whole loop — including the verb everyone skips.</h2>
+      <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">Every step is a real call in the codebase — remember, recall, and the one almost no one ships: <span class="font-medium text-zinc-900 dark:text-zinc-100">forget</span>.</p>
+    </div>
+    <div id="lifecycle" class="relative mt-12">
+      <div class="lc-rail hidden text-zinc-200 dark:text-zinc-800 sm:block" aria-hidden="true"></div>
+      <div id="lcFill" class="lc-fill hidden sm:block" aria-hidden="true"></div>
+      <ol class="relative grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <li class="lc-stage rounded-2xl border border-zinc-300 p-5 text-center dark:border-zinc-800"><span class="lc-dot mx-auto mb-3 block h-2.5 w-2.5 rounded-full" aria-hidden="true"></span><div class="mono text-xs text-cyan-600 dark:text-cyan-400">cognee.add</div><div class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">Remember</div><div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">ingest runbooks</div></li>
+        <li class="lc-stage rounded-2xl border border-zinc-300 p-5 text-center dark:border-zinc-800"><span class="lc-dot mx-auto mb-3 block h-2.5 w-2.5 rounded-full" aria-hidden="true"></span><div class="mono text-xs text-cyan-600 dark:text-cyan-400">cognee.cognify</div><div class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">Structure</div><div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">graph + vectors</div></li>
+        <li class="lc-stage rounded-2xl border border-zinc-300 p-5 text-center dark:border-zinc-800"><span class="lc-dot mx-auto mb-3 block h-2.5 w-2.5 rounded-full" aria-hidden="true"></span><div class="mono text-xs text-cyan-600 dark:text-cyan-400">cognee.search</div><div class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">Recall</div><div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">graph-grounded triage</div></li>
+        <li class="lc-stage lc-hero rounded-2xl border border-cyan-500/50 bg-cyan-500/[0.04] p-5 text-center"><span class="lc-dot lc-dot-hero mx-auto mb-3 block h-2.5 w-2.5 rounded-full" aria-hidden="true"></span><div class="mono text-xs text-cyan-600 dark:text-cyan-400">cognee.forget</div><div class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">Forget <span class="mono text-[10px] text-cyan-500">the differentiator</span></div><div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">verifiable hard-delete</div></li>
+        <li class="lc-stage rounded-2xl border border-zinc-300 p-5 text-center dark:border-zinc-800"><span class="lc-dot mx-auto mb-3 block h-2.5 w-2.5 rounded-full" aria-hidden="true"></span><div class="mono text-xs text-cyan-600 dark:text-cyan-400">cognee.prune</div><div class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">Reset</div><div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">rebuild from clean</div></li>
+      </ol>
+    </div>
+    <div class="reveal mt-8 mx-auto max-w-2xl rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 p-5">
+      <div class="mono text-xs text-zinc-400">deliberately omitted</div>
+      <div class="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Cognee also ships <span class="mono text-zinc-700 dark:text-zinc-300">improve()</span> — memory that silently grows itself. We skip it: memory grows on <span class="font-medium text-zinc-900 dark:text-zinc-100">explicit ingest</span>, shrinks on <span class="font-medium text-zinc-900 dark:text-zinc-100">verified forget</span>.</div>
+    </div>
+  </div>
+</section>
+
+<section id="evSection" class="hidden border-t border-zinc-300 dark:border-zinc-900">
+  <div class="mx-auto max-w-5xl px-5 py-20">
+    <div class="reveal text-center">
+      <div class="mb-1 mono text-xs uppercase tracking-[0.18em] text-zinc-400">the stale-advice benchmark</div>
+      <h2 class="serif text-3xl tracking-tight sm:text-4xl">Forgetting, proven.</h2>
+      <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">Most memory products claim they handle stale knowledge. We measure it — decommission three systems, re-ask, and let a blind judge score every answer.</p>
+    </div>
+    <div id="evGrid" class="reveal mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
+    <div id="evProof" class="reveal mt-4"></div>
+    <p id="evCap" class="reveal mt-6 text-center mono text-xs text-zinc-400"></p>
+  </div>
+</section>
+
+<section class="border-t border-zinc-300 dark:border-zinc-900">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center">
+    <h2 class="reveal serif text-4xl tracking-tight sm:text-5xl">Everyone builds AI that remembers more.</h2>
+    <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-zinc-500 dark:text-zinc-400">The whole field accumulates — and stale runbooks mislead as often as they help. Lethe makes the opposite move: <span class="font-medium text-zinc-900 dark:text-zinc-100">forgetting the dead thing, on command and verifiably</span>.</p>
+  </div>
+</section>
+
+</main>
+<footer class="relative overflow-hidden border-t border-zinc-300 dark:border-zinc-900">
+  <div class="mx-auto max-w-5xl px-5 pt-20 pb-6 text-center">
+    <h2 class="serif text-3xl tracking-tight">Stop giving 3 a.m. advice about systems that no longer exist.</h2>
+    <a href="/app" class="mt-6 inline-block rounded-full bg-zinc-950 px-7 py-3 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-lg hover:shadow-cyan-500/10 dark:bg-white dark:text-black dark:hover:bg-zinc-200">Launch the app →</a>
+    <p class="mt-8 text-xs text-zinc-400">Built on Cognee · self-hosted · remember + verifiable forget</p>
+  </div>
+  <div aria-hidden="true" class="relative mx-auto h-24 w-full max-w-6xl overflow-hidden" style="-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)">
+    <svg class="wv wv-b" viewBox="0 0 1440 60" preserveAspectRatio="none" fill="none"><path d="M0 37 Q90 19 180 37 T360 37 T540 37 T720 37 T900 37 T1080 37 T1260 37 T1440 37" stroke="#6366f1" stroke-width="2" stroke-opacity=".35" stroke-linecap="round"/></svg>
+    <svg class="wv wv-f" viewBox="0 0 1440 60" preserveAspectRatio="none" fill="none"><defs><linearGradient id="lwave" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><path d="M0 30 Q90 9 180 30 T360 30 T540 30 T720 30 T900 30 T1080 30 T1260 30 T1440 30" stroke="url(#lwave)" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </div>
+  <div aria-hidden="true" class="reveal lethe-mark serif italic select-none px-2 text-center">Lethe</div>
+</footer>
+
+<script>
+ const root=document.documentElement;
+ if(localStorage.theme==='light')root.classList.remove('dark');
+ document.getElementById('theme').onclick=()=>{root.classList.toggle('dark');localStorage.theme=root.classList.contains('dark')?'dark':'light';};
+ document.querySelectorAll('.card').forEach(c=>{c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px');});c.addEventListener('mouseleave',()=>{c.style.setProperty('--mx','-200px');c.style.setProperty('--my','-200px');});});
+ document.querySelectorAll('.stg').forEach(g=>[...g.children].forEach((c,i)=>c.style.setProperty('--i',i)));
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+ document.querySelectorAll('.reveal,.stg').forEach(el=>io.observe(el));
+
+ // signature scroll moment — the forget hero plays out as you scroll through a pinned section
+ (function(){
+   const sec=document.getElementById('scrolly'),stage=document.getElementById('sstage');
+   if(!sec||!stage)return;
+   const $=id=>document.getElementById(id);
+   const ssQ=$('ssQ'),ssA1=$('ssA1'),ssA2=$('ssA2'),ssLC=$('ssLC'),ssRec=$('ssRec'),ssCap=$('ssCap'),ssHint=$('ssHint'),srail=$('srail');
+   const CAPS=['You ask your on-call assistant.',
+     'It recommends checking the legacy-cache — flush and resize the cluster.',
+     'You decommission legacy-cache. Gone — across the graph and the vectors.',
+     'Now ask the exact same question again — byte for byte.',
+     'The answer flips to the session-store. The dead system is gone for good.'];
+   let cur=-1;
+   function setStage(s){
+     if(s===cur)return; cur=s; stage.dataset.stage=s;
+     ssQ.classList.toggle('show',s>=0);
+     ssA1.classList.toggle('show',s>=1&&s<3);
+     ssLC.classList.toggle('gone',s>=2);
+     ssRec.classList.toggle('show',s>=2);
+     ssA2.classList.toggle('show',s>=4);
+     ssQ.classList.toggle('reask',s===3);
+     if(ssCap)ssCap.textContent=CAPS[s]||CAPS[0];
+     if(ssHint)ssHint.style.opacity=s>=4?'0':'.6';
+     if(srail)srail.querySelectorAll('[data-s]').forEach(el=>el.classList.toggle('on',(+el.dataset.s)<=s));
+   }
+   if(matchMedia('(prefers-reduced-motion:reduce)').matches){sec.classList.add('noscroll');setStage(4);return;}
+   let tick=false;
+   function compute(){tick=false;
+     const total=sec.offsetHeight-window.innerHeight;
+     const scrolled=Math.min(Math.max(-sec.getBoundingClientRect().top,0),Math.max(total,1));
+     const prog=total>0?scrolled/total:0;
+     setStage(Math.max(0,Math.min(4,Math.floor(prog*5))));
+   }
+   addEventListener('scroll',()=>{if(!tick){tick=true;requestAnimationFrame(compute);}},{passive:true});
+   addEventListener('resize',()=>{if(!tick){tick=true;requestAnimationFrame(compute);}},{passive:true});
+   compute();
+ })();
+
+ // measured proof — pulls the REAL correctness benchmark (blind independent judge, 0-2). Stays HIDDEN
+ // until that benchmark has actually been run, so the landing never shows an unproven/circular number.
+ (function(){
+   const fmt=x=>(typeof x==='number')?x.toFixed(1):'—';
+   fetch('/evidence').then(r=>r.json()).then(d=>{
+     if(!d||!d.available)return;
+     const sec=document.getElementById('evSection');if(!sec)return;
+     const clamp=x=>Math.max(0,Math.min(100,x/2*100));
+     // bars start at width:0 (CSS) and grow to data-w on reveal; the thin marker shows the BEFORE value
+     const mbar=(bef,aft)=>'<div class="relative mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800/80"><div class="evbar-fill absolute inset-y-0 left-0 rounded-full '+(aft>bef?'bg-cyan-500':'bg-zinc-400 dark:bg-zinc-500')+'" data-w="'+clamp(aft)+'%"></div><div class="absolute inset-y-0 w-px bg-zinc-500/70 dark:bg-zinc-400/70" style="left:calc('+clamp(bef)+'% - 0.5px)"></div></div>';
+     // the AFTER number counts up from BEFORE on reveal (data-to / data-from), so the proof feels measured live
+     const metric=(label,bef,aft,desc)=>{const up=aft>bef,acc=up?'text-cyan-600 dark:text-cyan-400':'text-zinc-700 dark:text-zinc-100';
+       return '<div class="rounded-2xl border border-zinc-300 p-6 dark:border-zinc-800">'
+         +'<div class="mono text-[11px] uppercase tracking-[0.16em] text-zinc-400">'+label+'</div>'
+         +'<div class="mt-3 flex items-baseline gap-1.5"><span class="serif text-3xl text-zinc-400 dark:text-zinc-500">'+bef.toFixed(1)+'</span><span class="text-base text-zinc-300 dark:text-zinc-600">&rarr;</span><span class="serif text-[2.7rem] leading-none '+acc+'" data-to="'+aft+'" data-from="'+bef+'">'+bef.toFixed(1)+'</span><span class="ml-0.5 mono text-xs text-zinc-400">/2</span></div>'
+         +mbar(bef,aft)
+         +'<div class="mt-3.5 text-sm leading-snug text-zinc-500 dark:text-zinc-400">'+desc+'</div></div>';};
+     const grid=document.getElementById('evGrid'); grid.classList.add('stg');
+     grid.innerHTML=
+       metric('Update', d.stale_before, d.stale_after, 'Stale advice gets corrected once the dead system is forgotten.')
+       +(d.abstention_after!=null?metric('Abstention', d.abstention_before, d.abstention_after, 'Correctly answers &ldquo;not documented&rdquo; about a forgotten system.'):'')
+       +metric('Control', d.control_before, d.control_after, 'Unrelated answers stay correct &mdash; the forget is surgical.');
+     [...grid.children].forEach((c,i)=>c.style.setProperty('--i',i));
+     if(d.retrieval_proof_pass!=null){
+       const ok=d.retrieval_proof_pass;
+       document.getElementById('evProof').innerHTML='<div class="mx-auto max-w-2xl rounded-2xl border p-5 text-center '+(ok?'border-emerald-500/40':'border-zinc-300 dark:border-zinc-800')+'"><span class="mono text-xs '+(ok?'text-emerald-600 dark:text-emerald-400':'text-zinc-400')+'">'+(ok?'&#10003; retrieval-layer deletion verified':'retrieval-layer deletion: not verified')+'</span><div class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">after a forget, a chunk-level search returns <span class="font-medium text-zinc-900 dark:text-zinc-100">zero</span> chunks from the forgotten document &mdash; gone from the index, not merely rephrased in the answer</div></div>';
+     }
+     document.getElementById('evCap').textContent='The Stale-Advice Eradication benchmark · independently judged ('+(d.judge_model||'a different model')+'), blind to before/after · research/forget_correctness_benchmark.py'+(d.generated_at?' · last run '+String(d.generated_at).slice(0,10):'');
+     sec.classList.remove('hidden');
+     const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+     const reveal=()=>{
+       sec.querySelectorAll('.reveal,.stg').forEach(e=>e.classList.add('in'));
+       grid.querySelectorAll('.evbar-fill').forEach(b=>{b.style.width=b.dataset.w;});
+       grid.querySelectorAll('[data-to]').forEach(el=>{const to=+el.dataset.to,from=+(el.dataset.from||0);
+         if(reduce){el.textContent=to.toFixed(1);return;}
+         const t0=performance.now(),dur=950;(function step(t){const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);el.textContent=(from+(to-from)*e).toFixed(1);if(k<1)requestAnimationFrame(step);})(t0);});
+     };
+     if(reduce){reveal();}
+     else{const o=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){reveal();o.disconnect();}}),{threshold:.18});o.observe(sec);}
+   }).catch(()=>{});
+ })();
+
+ // flow wave — the river of Lethe: barely there at the top, grows a touch as you scroll, then fades out
+ // as the footer river takes over (the merge). rAF-throttled; respects reduced-motion.
+ (function(){
+   const fw=document.getElementById('flowWave');if(!fw)return;
+   if(matchMedia('(prefers-reduced-motion:reduce)').matches){fw.style.opacity='.12';return;}
+   const footer=document.querySelector('footer');let tick=false;
+   function apply(){tick=false;const sc=window.scrollY,vh=window.innerHeight;
+     const prog=Math.min(1,sc/(vh*1.1));let op=.12+prog*.34;
+     if(footer){const ft=footer.getBoundingClientRect().top;if(ft<vh)op*=Math.max(0,Math.min(1,ft/(vh*.7)));}
+     fw.style.opacity=op.toFixed(3);}
+   window.addEventListener('scroll',()=>{if(!tick){tick=true;requestAnimationFrame(apply);}},{passive:true});
+   apply();
+ })();
+
+ // live demo — REAL queries against the running knowledge graph. No scripted/hardcoded answers: each
+ // bubble is the actual /ask response. (A live FORGET can't run on the shared public graph — that would
+ // wipe the demo for the next visitor — so the forget flip is in the app + the receipt below.)
+ (function(){
+   const log=document.getElementById('demoLog'),chips=document.getElementById('demoChips'),
+         form=document.getElementById('demoForm'),input=document.getElementById('demoInput');
+   if(!log||!form)return;
+   const samples=['If auth-service latency is high, what should I check?','Who owns the payments-service?','What breaks if the auth-service fails?'];
+   function bub(role,html){const w=document.createElement('div');w.className='flex '+(role==='u'?'justify-end':'justify-start');
+     const c=document.createElement('div');c.className='max-w-[88%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed '+(role==='u'?'rounded-br-md bg-zinc-950 text-white dark:bg-white dark:text-black':'rounded-bl-md border border-zinc-300 bg-white dark:border-zinc-800 dark:bg-[#1a2233]');
+     c.innerHTML=html;w.appendChild(c);log.appendChild(w);log.scrollTop=log.scrollHeight;return c;}
+   bub('a','Ask about the demo systems — click a question below or type your own. These are real answers, straight from the knowledge graph.');
+   let busy=false;
+   async function ask(q){
+     q=(q||'').trim();if(busy||!q)return;busy=true;
+     bub('u',q.replace(/[<&]/g,m=>m==='<'?'&lt;':'&amp;'));
+     const a=bub('a','<span class="text-zinc-400">thinking…</span>');
+     const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),30000);
+     try{
+       const r=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,workspace:'incidents'}),signal:ctl.signal});
+       const j=await r.json();a.textContent=j.answer||'No answer.';
+     }catch(e){a.innerHTML='<span class="text-zinc-400">Could not reach the model right now — try it in the <a href="/app" class="underline">app</a>.</span>';}
+     finally{clearTimeout(to);busy=false;log.scrollTop=log.scrollHeight;}
+   }
+   samples.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s;
+     b.className='rounded-full border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 transition hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-cyan-400 dark:hover:text-cyan-400';
+     b.onclick=()=>ask(s);chips.appendChild(b);});
+   form.onsubmit=e=>{e.preventDefault();const v=input.value;input.value='';ask(v);};
+ })();
+
+ // lifecycle pipeline — connector draws as you scroll, each stage's dot lights as the line reaches it.
+ // Geometry is MEASURED from the real dot centers so the rail/fill align exactly at every breakpoint.
+ (function(){
+   const sec=document.getElementById('lifecycle');if(!sec)return;
+   const fill=document.getElementById('lcFill'),rail=sec.querySelector('.lc-rail');
+   const stages=[...sec.querySelectorAll('.lc-stage')];
+   const dots=stages.map(s=>s.querySelector('.lc-dot'));
+   if(!fill||!dots.length||dots.some(d=>!d))return;
+   const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+   let cx=[],x0=0,span=1;
+   function measure(){const sr=sec.getBoundingClientRect();
+     const c=dots.map(d=>{const r=d.getBoundingClientRect();return {x:r.left+r.width/2-sr.left,y:r.top+r.height/2-sr.top};});
+     cx=c.map(p=>p.x);x0=cx[0];span=Math.max(1,cx[cx.length-1]-x0);
+     const top=c[0].y+'px';
+     if(rail){rail.style.left=x0+'px';rail.style.width=span+'px';rail.style.top=top;}
+     fill.style.left=x0+'px';fill.style.top=top;}
+   function paint(p){fill.style.width=(p*span).toFixed(1)+'px';
+     stages.forEach((s,i)=>s.classList.toggle('lit',p>=(cx[i]-x0)/span-0.001));}
+   if(reduce){measure();paint(1);return;}
+   let running=false,ticking=false;
+   function prog(){const r=sec.getBoundingClientRect(),vh=innerHeight;return Math.min(1,Math.max(0,(vh*0.85-r.top)/(vh*0.5)));}
+   function render(){ticking=false;measure();paint(prog());}
+   function onScroll(){if(!ticking){ticking=true;requestAnimationFrame(render);}}
+   render();
+   const io=new IntersectionObserver(es=>es.forEach(e=>{
+     if(e.isIntersecting){if(!running){running=true;addEventListener('scroll',onScroll,{passive:true});}render();}
+     else if(running){running=false;removeEventListener('scroll',onScroll);}
+   }),{threshold:0});
+   io.observe(sec);
+   addEventListener('resize',()=>requestAnimationFrame(render),{passive:true});
+ })();
+
+ // live landing graph — a real vis-network physics slice you can drag + forget; recolors with the theme.
+ (function(){
+   const box=document.getElementById('lgraph');if(!box)return;
+   const cap=document.getElementById('lgcap'),btn=document.getElementById('lgbtn'),rec=document.getElementById('lgrec');
+   const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+   function loadVisL(cb){if(window.vis)return cb();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js';s.onload=cb;s.onerror=function(){box.innerHTML='<div class="grid h-full place-items-center text-xs text-zinc-400">graph unavailable</div>';};document.head.appendChild(s);}
+   const NODES=[{id:'auth',label:'auth-service',val:22},{id:'lc',label:'legacy-cache',val:14,dead:true},{id:'ss',label:'session-store',val:13},{id:'pay',label:'payments-service',val:13},{id:'api',label:'api-gateway',val:15},{id:'idx',label:'search-index',val:11},{id:'notif',label:'notifications',val:10},{id:'mon',label:'monitoring',val:9}];
+   const EDGES=[['auth','lc'],['auth','ss'],['lc','ss'],['auth','api'],['api','pay'],['pay','idx'],['auth','mon'],['notif','api'],['api','idx']];
+   function pal(){return document.documentElement.classList.contains('dark')
+     ?{nb:'#22d3ee',nbr:'#0891b2',db:'#f87171',dbr:'#ef4444',edge:'rgba(100,116,139,.5)',font:'#e2e8f0',halo:'#0a0e1a',glow:'rgba(34,211,238,.85)'}
+     :{nb:'#0891b2',nbr:'#0e7490',db:'#ef4444',dbr:'#dc2626',edge:'rgba(148,163,184,.7)',font:'#0f172a',halo:'#f4f7fc',glow:'rgba(8,145,178,.5)'};}
+   function ncol(dead,p){return dead?{background:p.db,border:p.dbr}:{background:p.nb,border:p.nbr};}
+   function nfont(p){return {color:p.font,size:13,strokeWidth:4,strokeColor:p.halo,face:"'Geist Mono',monospace"};}
+   let net,nds,eds,gone=false,auto=!reduce;
+   function build(){
+     const p=pal();
+     nds=new vis.DataSet(NODES.map(n=>({id:n.id,label:n.label,shape:'dot',value:n.val,color:ncol(n.dead,p),font:nfont(p)})));
+     eds=new vis.DataSet(EDGES.map((e,i)=>({id:'e'+i,from:e[0],to:e[1],color:{color:p.edge},width:1.2})));
+     net=new vis.Network(box,{nodes:nds,edges:eds},{
+       nodes:{borderWidth:2,scaling:{min:8,max:24}},
+       edges:{smooth:{type:'continuous',roundness:.45}},
+       physics:{solver:'forceAtlas2Based',forceAtlas2Based:{gravitationalConstant:-65,centralGravity:.015,springLength:95,springConstant:.08,damping:.5,avoidOverlap:.7},stabilization:{iterations:220,fit:true},minVelocity:.55},
+       interaction:{hover:true,dragNodes:true,dragView:false,zoomView:false}});
+     net.on('hoverNode',pr=>{box.style.cursor='grab';const id=pr.node,nb=new Set([id]);eds.get().forEach(e=>{if(e.from===id)nb.add(e.to);if(e.to===id)nb.add(e.from);});const p2=pal();
+       nds.update(nds.getIds().map(i=>({id:i,opacity:nb.has(i)?1:.22,shadow:i===id?{enabled:true,color:p2.glow,size:26,x:0,y:0}:{enabled:false}})));});
+     net.on('blurNode',()=>{box.style.cursor='default';nds.update(nds.getIds().map(i=>({id:i,opacity:1,shadow:{enabled:false}})));});
+     net.on('click',pr=>{if(pr.nodes&&pr.nodes[0]==='lc')toggle();});
+     net.on('dragStart',()=>{auto=false;});
+   }
+   function recolor(){if(!nds)return;const p=pal();nds.update(NODES.filter(n=>nds.get(n.id)).map(n=>({id:n.id,color:ncol(n.dead,p),font:nfont(p)})));eds.update(eds.getIds().map(id=>({id,color:{color:p.edge}})));}
+   function showRec(on){if(!rec)return;rec.classList.toggle('hidden',!on);rec.classList.toggle('flex',on);}
+   function forget(){if(gone||!nds.get('lc'))return;gone=true;
+     nds.update({id:'lc',opacity:.04,shadow:{enabled:true,color:'rgba(248,113,113,.7)',size:30,x:0,y:0}});
+     const le=eds.get().filter(e=>e.from==='lc'||e.to==='lc').map(e=>e.id);
+     setTimeout(()=>{try{eds.remove(le);nds.remove('lc');}catch(e){}},reduce?0:360);
+     showRec(true);if(cap)cap.textContent='legacy-cache forgotten — gone from the graph and the vectors.';if(btn)btn.textContent='Replay';}
+   function restore(){gone=false;showRec(false);if(cap)cap.textContent='An interactive preview of an incident graph — drag a node, or forget the dead one.';if(btn)btn.textContent='Decommission legacy-cache';
+     const p=pal();if(!nds.get('lc'))nds.add({id:'lc',label:'legacy-cache',shape:'dot',value:14,color:ncol(true,p),font:nfont(p)});
+     if(!eds.get('e0'))eds.add({id:'e0',from:'auth',to:'lc',color:{color:p.edge},width:1.2});
+     if(!eds.get('e2'))eds.add({id:'e2',from:'lc',to:'ss',color:{color:p.edge},width:1.2});}
+   function toggle(){auto=false;if(gone)restore();else forget();}
+   loadVisL(function(){build();if(btn)btn.onclick=toggle;
+     if(!reduce)(function loop(){if(!auto)return;setTimeout(function(){if(!auto)return;forget();setTimeout(function(){if(!auto)return;restore();setTimeout(loop,1400);},2600);},3400);})();
+     new MutationObserver(recolor).observe(document.documentElement,{attributes:true,attributeFilter:['class']});});
+ })();
+
+</script>
+</body></html>

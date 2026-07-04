@@ -22,6 +22,8 @@ No signup. Ask *"If auth-service latency is high, what should I check?"* → dec
 
 **Memory that stays current instead of rotting.**
 
+<sub>Jump to: [Judging criteria](#how-it-maps-to-the-judging-criteria) · [The hero](#the-hero-the-same-question-before-and-after) · [How it works](#how-it-works) · [Two layers of forgetting](#two-layers-of-forgetting-hard-delete-and-soft-decay) · [Everything it does](#everything-it-does) · [Quickstart](#quickstart) · [MCP](#use-it-from-your-editor-mcp) · [Research story](#the-research-story-why-we-trust-the-hero) · [Honest limits](#honest-limits-what-we-dont-claim)</sub>
+
 ---
 
 ## How it maps to the judging criteria
@@ -304,6 +306,8 @@ We didn't assume `forget` was the differentiator — we **gauntleted three of th
 
 Forgetting fixed the stale advice (update 1.0 → 2.0) without touching unrelated answers (control held at 2.0). Abstention rose from 0 to 0.67: the hero `legacy-cache` cleanly answers *"not documented"* after forget, while `email-relay`/`image-resizer` instead **redirect to their replacements** — a nuance we report rather than hide. And beyond the answer text, a chunk-level search proves the forgotten documents are **gone from the retrieval index**, not merely rephrased around. Numbers live in [`research/forget_correctness_results.json`](research/forget_correctness_results.json) and on the landing's *"Forgetting, proven"* panel (`GET /evidence`). It's a run-once, capture-the-result artifact (the blind judge is LLM-quota-heavy).
 
+**Replicated at 2× scale with a different model pair.** We re-ran the same protocol on a **27-document / 18-system corpus with six decommissions**, with a completely different pairing — system under test `zai-glm-4.7` (the model the live demo runs), judge `gpt-oss-120b`, both families different from run one. Result: update **1.5 → 2.0** (the stronger model partially resists stale bait even before the forget — an honest finding, and forgetting still lifts it to perfect), control held **2.0 → 2.0**, abstention rose **0.0 → 1.0**, and the chunk-level deletion proof passed **6/6 systems**. Full data in [`research/forget_correctness_results_n6.json`](research/forget_correctness_results_n6.json). One failed attempt along the way (provider rate-limiting silently dropped half the corpus mid-ingest) was **discarded, not published** — the fix (batched cognify) is in the benchmark script.
+
 That honesty is deliberate: the judging criteria reward craft and depth, not a fragile "we beat RAG" claim. The full story is in [`learning/05-the-research-story/`](learning/05-the-research-story/what-we-tested-and-killed.md).
 
 ---
@@ -315,7 +319,7 @@ That honesty is deliberate: the judging criteria reward craft and depth, not a f
 - **Single-tenant by design.** One instance per team — like early Grafana or a self-hosted Sentry. Workspaces isolate knowledge bases (each its own Cognee dataset + graph); the opt-in bearer token gates a shared deploy. Org-level accounts and RBAC are an enterprise-roadmap layer on top, not a missing bolt — the memory primitive is the product, and it's deliberately deployable as a private box before it's a SaaS.
 - **Chat threads are client-side today.** History/threads live in the browser (`localStorage`), so they're per-device, not synced. That's fine for a single operator at a terminal; server-side sessions are roadmap (and would ride on the same auth layer).
 - **Citations are provenance by name-match**, not a scored retrieval trace — they tell you *which runbooks the answer drew on*, honestly, without claiming a ranking they don't have.
-- **The benchmark is directional, not a p-value.** Three decommissions on an 18-doc corpus, blind-judged — enough to show the effect is real and surgical, not enough to call it "proven at scale." We say so.
+- **The benchmark is directional, not a p-value.** Two blind-judged runs — 3 decommissions/18 docs, replicated at 6 decommissions/27 docs with a different model pair — enough to show the effect is real, surgical, and holds across models; not enough to call it "proven at scale." We say so.
 - **Pinned to Cognee 1.1.3.** 1.2.x's structured graph build fails with our weak local-friendly LLM (empty graph). The path forward — a tight custom `graph_model` to shrink the structured-output target — is scoped in [`learning/07`](learning/07-cognee-capability-audit.md).
 - **One soft edge:** a question about a *facet* of a system that *has* a runbook can occasionally over-point to that runbook instead of admitting the facet is undocumented. It's an LLM limit, not prompt-fixable; the demo is hero-driven so it's a documented residual, not a blocker.
 
