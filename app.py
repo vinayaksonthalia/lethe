@@ -436,7 +436,7 @@ class LlmCfgReq(BaseModel):
 
 @app.get("/health")
 async def health(request: Request):
-    out = {"ready": S["ready"], "status": S["status"], "auth": bool(_AUTH_TOKEN)}
+    out = {"ready": S["ready"], "status": S["status"], "auth": bool(_AUTH_TOKEN), "demo": _PUBLIC_DEMO}
     # Only expose the system inventory + active LLM when auth is OFF (local self-host) OR the caller is
     # authenticated. Avoids leaking the system list + provider/model to anonymous remote callers. The UI
     # always sends the token when one is set, so its badge + system count stay populated.
@@ -458,6 +458,10 @@ async def llm_config_set(r: LlmCfgReq):
     """Bring-your-own-key: apply the user's LLM at runtime. Validate the CANDIDATE first (a non-mutating
     probe), and only commit to the global config once it answers — so a bad key never replaces the working
     provider mid-request."""
+    if _PUBLIC_DEMO:
+        # Single-tenant: a model switch here is GLOBAL. On the shared hosted demo that would let any
+        # visitor rewire (or break) the instance for everyone — so the demo runs a fixed model.
+        return {"ok": False, "error": "The hosted demo runs a fixed model. Run Lethe yourself to bring your own key."}
     cfg = {"provider": r.provider, "model": r.model, "endpoint": r.endpoint, "api_key": r.api_key}
     # SSRF guard: the probe below (and every later /ask) makes an OUTBOUND request to this endpoint carrying
     # the API key, so validate the destination BEFORE any network call. Rejects cloud-metadata / RFC1918 /
@@ -486,6 +490,8 @@ async def llm_config_set(r: LlmCfgReq):
 @app.post("/llm-config/reset")
 async def llm_config_reset():
     """Forget the bring-your-own key and fall back to the server's default (.env) provider."""
+    if _PUBLIC_DEMO:
+        return {"ok": False, "error": "The hosted demo runs a fixed model. Run Lethe yourself to bring your own key."}
     _apply_llm_config(S.get("llm_default") or {})
     try:
         os.remove(LLM_CONFIG_PATH)
@@ -1646,7 +1652,8 @@ PAGE = """<!doctype html>
       <section data-view="upload" class="hidden min-h-0 flex-1 overflow-y-auto py-8">
         <div><h2 class="serif text-2xl tracking-tight">Upload</h2>
         <p class="mt-1 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">Feed your own runbooks, post-mortems or notes. They're parsed into the knowledge graph.</p>
-        <p class="mt-2 max-w-2xl text-xs text-zinc-400 dark:text-zinc-500">Ingestion runs a real <span class="mono">cognify</span> pass — about a minute, and it uses your LLM key. The default <span class="font-medium">Incidents</span> workspace is read-only to protect the demo data; create a workspace to ingest into.</p></div>
+        <p class="mt-2 max-w-2xl text-xs text-zinc-400 dark:text-zinc-500">Ingestion runs a real <span class="mono">cognify</span> pass — about a minute, and it uses your LLM key. The default <span class="font-medium">Incidents</span> workspace is read-only to protect the demo data; create a workspace to ingest into.</p>
+        <p id="demoEphemeral" class="hidden mt-1.5 max-w-2xl text-xs text-amber-600/90 dark:text-amber-400/80">Hosted demo: anything you ingest lives only until the instance restarts — nothing is kept. Self-host for persistent memory.</p></div>
         <label id="drop" class="mt-5 block cursor-pointer rounded-xl border border-dashed border-zinc-300 bg-white p-10 text-center transition hover:border-zinc-400 dark:border-zinc-700 dark:bg-[#141b2b] dark:hover:border-zinc-600">
           <input id="file" type="file" accept=".txt,.md,.markdown,.json,.csv,.log" multiple class="hidden">
           <svg class="mx-auto mb-2 text-zinc-400" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
@@ -1906,6 +1913,7 @@ PAGE = """<!doctype html>
  async function poll(){try{const h=await(await fetch('/health')).json();
    if(h.llm){$('llmbadge').textContent=h.llm.label+' · '+(h.llm.local?'local':'cloud');$('llmdot').className='h-1.5 w-1.5 shrink-0 rounded-full '+(h.llm.local?'bg-emerald-500':'bg-cyan-500');}
    {const al=$('authLock');if(al)al.classList.toggle('hidden',!h.auth);}
+   {const de=$('demoEphemeral');if(de)de.classList.toggle('hidden',!h.demo);window._isDemo=!!h.demo;}
    if(h.ready){ready=true;setDot('ready · '+((h.systems&&h.systems.length)||0)+' systems','ok');$('bAsk').disabled=false;$('bUp').disabled=false;if(ctxSysCount==null)loadCtxCount();if(!poll._mem){poll._mem=1;loadMemHealth();}}
    else{setDot(h.status||'starting…','wait');setTimeout(poll,2000);}
  }catch(e){setTimeout(poll,2000);}}
@@ -2640,9 +2648,10 @@ PAGE = """<!doctype html>
      setTimeout(()=>$('setProvider').focus(),40);}
    // M5: surface the EXISTING single-tenant auth — read-only /health probe + client-token controls (no backend change).
    async function renderSec(){const ss=$('secState'),row=$('secTokenRow');if(!ss)return;
-     let auth=false;try{const h=await(await fetch('/health')).json();auth=!!h.auth;}catch(e){}
+     let auth=false,demo=false;try{const h=await(await fetch('/health')).json();auth=!!h.auth;demo=!!h.demo;}catch(e){}
      const hasTok=!!localStorage.getItem('lethe.token');
      if(auth)ss.innerHTML='<span class="font-medium text-cyan-700 dark:text-cyan-300">Protected</span> — this instance requires an access token. '+(hasTok?'A token is saved in this browser.':'No token saved yet — you will be prompted on the next API call.');
+     else if(demo)ss.innerHTML='<span class="font-medium text-amber-600 dark:text-amber-300">Hosted demo</span> — open and rate-limited; the model is fixed and all data resets on restart.';
      else ss.innerHTML='<span class="font-medium text-zinc-700 dark:text-zinc-200">Open (local mode)</span> — no token required.'+(hasTok?' A leftover client token is saved.':'');
      if(row)row.classList.toggle('hidden',!(auth||hasTok));
      const sc=$('secClear');if(sc)sc.classList.toggle('hidden',!hasTok);}
@@ -2663,7 +2672,9 @@ PAGE = """<!doctype html>
      $('setSave').disabled=false;
    };
    $('setReset').onclick=async()=>{$('setMsg').innerHTML='<span class="text-zinc-500">resetting…</span>';
-     try{await(await fetch('/llm-config/reset',{method:'POST'})).json();$('setMsg').innerHTML='<span class="text-emerald-600 dark:text-emerald-400">Back to the default model.</span>';$('setKey').value='';poll();}
+     try{const j=await(await fetch('/llm-config/reset',{method:'POST'})).json();
+       if(j&&j.ok===false){$('setMsg').innerHTML='<span class="text-amber-600 dark:text-amber-400">'+esc(j.error||'not available here')+'</span>';return;}
+       $('setMsg').innerHTML='<span class="text-emerald-600 dark:text-emerald-400">Back to the default model.</span>';$('setKey').value='';poll();}
      catch(e){$('setMsg').innerHTML='<span class="text-red-500">reset failed</span>';}
    };
    fill('groq');  // harmless initial state; open() re-fills from the active config

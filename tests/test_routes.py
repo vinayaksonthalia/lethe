@@ -135,6 +135,16 @@ def test_public_demo_mode_allows_remote_readonly(ready_app, monkeypatch):
     assert any(s["name"] == "legacy-cache" for s in r.json()["systems"])
 
 
+def test_public_demo_mode_locks_the_model_config(ready_app, loopback_client, monkeypatch):
+    # On the shared hosted demo, /llm-config is GLOBAL — visitors must not be able to
+    # rewire (or reset/break) the instance's model. Both mutations refuse in demo mode.
+    monkeypatch.setattr(ready_app, "_PUBLIC_DEMO", True)
+    r = loopback_client.post("/llm-config", json={"provider": "custom", "model": "x", "endpoint": "", "api_key": "k"})
+    assert r.status_code == 200 and r.json()["ok"] is False
+    r2 = loopback_client.post("/llm-config/reset")
+    assert r2.status_code == 200 and r2.json()["ok"] is False
+
+
 def test_mutating_route_allowed_for_loopback_client(loopback_client, ib_mod, monkeypatch):
     # Sibling assertion to the above: the SAME route, from loopback, passes the gate.
     # /forget reads the graph BEFORE the n==0 shortcut, so stub _graph_counts (would
