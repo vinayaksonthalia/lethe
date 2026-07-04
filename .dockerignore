@@ -11,8 +11,13 @@ __pycache__
 .cognee_system
 golden_snapshot_6sys
 research
-learning
 docs
+# learning/ ships IN the image now — /learn serves it as the docs/blog.
+# The four internal working notes stay out of the image entirely:
+learning/bug-hunt.md
+learning/hackathon-winners-research.md
+learning/security-review.md
+learning/ui-audit.md
 tests
 *.png
 graph.html
