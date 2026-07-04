@@ -6,7 +6,7 @@
 
 Imagine a kitchen where you own the fridge, the pantry, the cutting board, and the recipe box — all sitting right there on your counter. The only thing you don't own is a fancy chef you phone up to plate the final dish. Everything *about your food* stays in your kitchen; you just call the chef at the end to write up the answer. And if you ever want, you can hire a chef who lives in your house instead of calling out — then nothing ever leaves your kitchen at all.
 
-In Incident Detective, the fridge/pantry/cutting board/recipe box are the **local stores and local embeddings**; the phoned-in chef is the **LLM**.
+In Lethe, the fridge/pantry/cutting board/recipe box are the **local stores and local embeddings**; the phoned-in chef is the **LLM**.
 
 ## The real stack (from `.env`)
 
@@ -14,7 +14,7 @@ One piece is remote; everything that holds your data runs on the laptop:
 
 ```mermaid
 flowchart LR
-    APP["Incident Detective"] --> LLM["LLM — OpenRouter<br/>Llama 3.3 70B · temp 0"]
+    APP["Lethe"] --> LLM["LLM — OpenRouter<br/>Llama 3.3 70B · temp 0"]
     APP --> EMB["Embeddings — fastembed<br/>bge-small-en-v1.5 · 384-dim"]
     APP --> SQL[("SQLite<br/>relational metadata")]
     APP --> LDB[("LanceDB<br/>vectors")]

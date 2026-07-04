@@ -1,6 +1,6 @@
 # Honest Limits — What We Do NOT Claim
 
-**In one line:** The boundaries of Incident Detective, stated plainly — because a project that knows its own edges is more trustworthy than one that pretends it has none.
+**In one line:** The boundaries of Lethe, stated plainly — because a project that knows its own edges is more trustworthy than one that pretends it has none.
 
 ## ELI10
 

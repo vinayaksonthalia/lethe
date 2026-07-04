@@ -1,6 +1,6 @@
 # The Cognee API We Use
 
-**In one line:** Just five calls — `add`, `cognify`, `search`, `forget`, and the `only_context` flag — plus turning the response cache off, are the entire surface of how Incident Detective talks to Cognee.
+**In one line:** Just five calls — `add`, `cognify`, `search`, `forget`, and the `only_context` flag — plus turning the response cache off, are the entire surface of how Lethe talks to Cognee.
 
 ## ELI10 (a librarian with four buttons)
 

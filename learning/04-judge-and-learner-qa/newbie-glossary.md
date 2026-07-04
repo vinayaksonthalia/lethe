@@ -1,6 +1,6 @@
 # Newbie Glossary
 
-**In one line:** Every nerdy word in this project, explained the way you'd explain it to a smart 10-year-old, with one line tying it back to Incident Detective.
+**In one line:** Every nerdy word in this project, explained the way you'd explain it to a smart 10-year-old, with one line tying it back to Lethe.
 
 ## ELI10
 

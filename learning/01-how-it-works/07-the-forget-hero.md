@@ -1,6 +1,6 @@
 # 07 — The Forget Hero (the one leg the starter lacks)
 
-**In one line:** `forget` is a *hard delete* — it removes a decommissioned system's data record, its raw file on disk, and its derived graph nodes/edges + vector embeddings — so Incident Detective never gives stale advice; and because deleting from the corpus is *not* the same as deleting from the model's brain, we verified it **two ways**.
+**In one line:** `forget` is a *hard delete* — it removes a decommissioned system's data record, its raw file on disk, and its derived graph nodes/edges + vector embeddings — so Lethe never gives stale advice; and because deleting from the corpus is *not* the same as deleting from the model's brain, we verified it **two ways**.
 
 ## The thesis this file defends
 

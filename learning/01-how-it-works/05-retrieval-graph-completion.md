@@ -1,6 +1,6 @@
 # 05 — Retrieval: GRAPH_COMPLETION ("both, in order")
 
-**In one line:** When you ask a question, Incident Detective uses vectors to find the *right door*, the graph to *walk the connected rooms*, then the LLM to *write one answer* — all in a single `SearchType.GRAPH_COMPLETION` call.
+**In one line:** When you ask a question, Lethe uses vectors to find the *right door*, the graph to *walk the connected rooms*, then the LLM to *write one answer* — all in a single `SearchType.GRAPH_COMPLETION` call.
 
 ## ELI10
 

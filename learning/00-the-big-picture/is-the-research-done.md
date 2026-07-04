@@ -49,7 +49,7 @@ So: research **done**, hero **verified**, limits **stated**. Nothing left is a q
 
 ```mermaid
 flowchart LR
-    C["Incident Detective"] --> C1["Triage on demand<br/>plain-prose runbook answer"]
+    C["Lethe"] --> C1["Triage on demand<br/>plain-prose runbook answer"]
     C --> C2["Forget a retired system<br/>hard delete — the HERO"]
     C --> C3["Combine facts across docs<br/>coreference + graph traversal"]
     C --> C4["Refuse gracefully<br/>'not documented in the runbooks'"]

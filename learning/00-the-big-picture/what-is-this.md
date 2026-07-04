@@ -1,6 +1,6 @@
 # What Is This?
 
-**In one line:** Incident Detective is an on-call helper that remembers a team's incident knowledge *and forgets* the systems they retire, so it never gives stale advice at 3am.
+**In one line:** Lethe is an on-call helper that remembers a team's incident knowledge *and forgets* the systems they retire, so it never gives stale advice at 3am.
 
 ---
 
@@ -12,7 +12,7 @@ One night something breaks. You run to them in a panic and ask, *"The lights fli
 
 Now here's the clever part. Last month your family threw away the old broken space heater. A *dumb* helper would still say *"check the space heater!"* — because it remembers everything forever, including junk. Our helper is smarter: when something gets thrown away, it **forgets** it. So it never sends you chasing a thing that doesn't exist anymore.
 
-That's Incident Detective. Most people try to build an AI that **remembers more**. We built one that knows how to **forget the right things**.
+That's Lethe. Most people try to build an AI that **remembers more**. We built one that knows how to **forget the right things**.
 
 ---
 
@@ -22,7 +22,7 @@ Picture a software engineer who is "on-call." That means if the company's websit
 
 In that moment they don't want to read 50 pages of documentation. They want one calm sentence: *"Here's what to check first."*
 
-Incident Detective is the thing you ask. You type a question like:
+Lethe is the thing you ask. You type a question like:
 
 > *"If auth-service latency is high, what should I check?"*
 
@@ -89,7 +89,7 @@ We checked *both* because deleting data from the helper's library doesn't erase 
 
 ## Judge version (one paragraph)
 
-Incident Detective is a self-hosted on-call triage assistant for the WeMakeDevs Cognee hackathon. It ingests a team's plain-prose incident runbooks with Cognee, which infers a hybrid knowledge graph (Kùzu) plus vector store (LanceDB) from unstructured text with no schema or tagging, and answers via `SearchType.GRAPH_COMPLETION` — vector recall finds what's relevant, graph traversal finds what's connected, and the LLM combines both into one plain-language answer governed by a custom triage system prompt. The differentiator is **forget**: when a system is decommissioned, the app hard-deletes its documents from the corpus (raw files + graph nodes/edges + embeddings), so the assistant stops giving stale advice. We prove forget both structurally (zero residue across phrasings, file count drops 18→16) and behaviorally (the retired system never resurfaces under adversarial re-asking). The thesis: everyone is building AI that remembers *more*; the real on-call failure is AI that confidently remembers the *wrong, stale* thing — and `forget` is precisely the capability the official starter project lacks.
+Lethe is a self-hosted on-call triage assistant for the WeMakeDevs Cognee hackathon. It ingests a team's plain-prose incident runbooks with Cognee, which infers a hybrid knowledge graph (Kùzu) plus vector store (LanceDB) from unstructured text with no schema or tagging, and answers via `SearchType.GRAPH_COMPLETION` — vector recall finds what's relevant, graph traversal finds what's connected, and the LLM combines both into one plain-language answer governed by a custom triage system prompt. The differentiator is **forget**: when a system is decommissioned, the app hard-deletes its documents from the corpus (raw files + graph nodes/edges + embeddings), so the assistant stops giving stale advice. We prove forget both structurally (zero residue across phrasings, file count drops 18→16) and behaviorally (the retired system never resurfaces under adversarial re-asking). The thesis: everyone is building AI that remembers *more*; the real on-call failure is AI that confidently remembers the *wrong, stale* thing — and `forget` is precisely the capability the official starter project lacks.
 
 ---
 

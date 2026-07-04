@@ -1,6 +1,6 @@
 # Judge & Newbie Questions, Answered
 
-**In one line:** Every sharp question a hackathon judge (or a curious beginner) might fire at Incident Detective, with a short, honest, grounded answer.
+**In one line:** Every sharp question a hackathon judge (or a curious beginner) might fire at Lethe, with a short, honest, grounded answer.
 
 ## ELI10
 
@@ -10,7 +10,7 @@ Imagine you built a robot librarian that reads your team's notebooks and learns 
 
 ## What is this project, in one breath?
 
-**Incident Detective** is an on-call triage assistant. You feed it your team's incident knowledge (runbooks, post-mortems, ownership docs) as plain prose. It builds a memory you can ask questions like *"If auth-service latency is high, what should I check?"* — and, crucially, it can **forget** a system you decommission so it never gives you stale advice again.
+**Lethe** is an on-call triage assistant. You feed it your team's incident knowledge (runbooks, post-mortems, ownership docs) as plain prose. It builds a memory you can ask questions like *"If auth-service latency is high, what should I check?"* — and, crucially, it can **forget** a system you decommission so it never gives you stale advice again.
 
 The thesis: **everyone builds AI that remembers MORE; the real problem is AI that remembers the WRONG/STALE thing.** Our hero feature is **forget**.
 
@@ -233,7 +233,7 @@ Three reasons, in order of strength:
 
 `companybrain` is cognee's official starter. It demonstrates **remember** (and a weak "learn"). It does **not** demonstrate **forget**.
 
-Incident Detective headlines **remember + forget**, with "learns/improve" as a weak supporting leg only. **Forget is our hero** — the one leg the starter lacks, and the one that directly answers the thesis (don't just remember more; forget the stale thing).
+Lethe headlines **remember + forget**, with "learns/improve" as a weak supporting leg only. **Forget is our hero** — the one leg the starter lacks, and the one that directly answers the thesis (don't just remember more; forget the stale thing).
 
 ---
 

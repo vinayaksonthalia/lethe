@@ -1,4 +1,4 @@
-# 📚 Incident Detective — Learning Folder
+# 📚 Lethe — Learning Folder
 
 This folder explains the whole project **twice over**: simply enough for a curious 10‑year‑old, and precisely enough for a hackathon judge. It also doubles as the raw material for the README, the demo script, and the blog — three of the remaining tasks are really just "expand what's written here."
 

@@ -1,6 +1,6 @@
 # The Whole Stack — Every File and How It Fits
 
-**In one line:** Incident Detective is a handful of small Python files split into a slow "build the brain" step and an instant "serve the brain" step, with a snapshot for resetting the demo.
+**In one line:** Lethe is a handful of small Python files split into a slow "build the brain" step and an instant "serve the brain" step, with a snapshot for resetting the demo.
 
 ## ELI10
 

@@ -10,7 +10,7 @@ That map-building friend is **Cognee**. You hand it ordinary writing; it builds 
 
 ## The real mechanics (as used in this project)
 
-Cognee is an open-source memory framework. In **Incident Detective**, we feed it 18 short on-call runbooks and post-mortems written as plain prose — no tables, no tags, no schema. From that prose Cognee builds two stores at once, and we query them together.
+Cognee is an open-source memory framework. In **Lethe**, we feed it 18 short on-call runbooks and post-mortems written as plain prose — no tables, no tags, no schema. From that prose Cognee builds two stores at once, and we query them together.
 
 The whole lifecycle is just three beats — **remember**, **recall**, **forget** — over one graph + vector "second brain":
 
@@ -85,7 +85,7 @@ Cognee can also *learn/improve* memory over time. In our project this is a **wea
 
 ## Why it matters (demo / judging)
 
-Most hackathon "memory" projects show an AI that remembers **more**. Our thesis is that the harder, realer problem is an AI that remembers the **wrong or stale thing**. Cognee is the one framework that gives us all three legs — remember, recall, **forget** — out of one prose-to-graph pipeline, which is why "Incident Detective" can demo a system that *un-learns* a decommissioned service and stops giving stale advice. The graph + vector hybrid, built automatically from plain runbooks, is the core of our "Best Use of Cognee" story.
+Most hackathon "memory" projects show an AI that remembers **more**. Our thesis is that the harder, realer problem is an AI that remembers the **wrong or stale thing**. Cognee is the one framework that gives us all three legs — remember, recall, **forget** — out of one prose-to-graph pipeline, which is why "Lethe" can demo a system that *un-learns* a decommissioned service and stops giving stale advice. The graph + vector hybrid, built automatically from plain runbooks, is the core of our "Best Use of Cognee" story.
 
 ## Related
 

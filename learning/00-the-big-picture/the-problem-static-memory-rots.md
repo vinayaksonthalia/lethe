@@ -53,7 +53,7 @@ So the right question isn't *"How much can it remember?"* It's *"Can it stop rem
 
 This reframes the whole project. We are not competing on "remembers the most." We're claiming a different, neglected axis: **knowledge hygiene**. An assistant that prunes dead knowledge is more trustworthy than one that hoards everything, because trust at 3am comes from *currency*, not volume.
 
-That's why the hero capability of Incident Detective is **forget** — and why we treat *remember* as table stakes and *learn/improve* as only a weak supporting leg. (See the hero beat in [what-we-built.md](what-we-built.md).)
+That's why the hero capability of Lethe is **forget** — and why we treat *remember* as table stakes and *learn/improve* as only a weak supporting leg. (See the hero beat in [what-we-built.md](what-we-built.md).)
 
 ```mermaid
 flowchart LR

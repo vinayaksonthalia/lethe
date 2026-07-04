@@ -6,7 +6,9 @@ It remembers your team's runbooks across every session, answers on-call question
 
 ![Cognee 1.1.3](https://img.shields.io/badge/built%20on-Cognee%201.1.3-7c5cff) ![Python 3.12](https://img.shields.io/badge/python-3.12-3776ab) ![FastAPI](https://img.shields.io/badge/FastAPI-stdio%20%2B%20web-009688) ![Self-hosted](https://img.shields.io/badge/self--hosted-offline%20capable-22c55e) ![MCP](https://img.shields.io/badge/MCP-Claude%20%2F%20Cursor-f59e0b)
 
-<img src="docs/screenshots/landing.png" alt="Lethe landing — On-call memory that forgets the stale stuff" width="100%">
+<img src="docs/screenshots/hero-flip.gif" alt="The hero flip, live: ask → decommission legacy-cache (receipt) → ask the same question → the answer changes" width="100%">
+
+<em>The whole product in 18 seconds — same question asked twice; in between, one system is verifiably forgotten.</em>
 
 ### ⚡ [**Try it live → vinayaksonthalia-lethe.hf.space**](https://vinayaksonthalia-lethe.hf.space)
 
