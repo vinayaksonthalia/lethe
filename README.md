@@ -8,6 +8,10 @@ It remembers your team's runbooks across every session, answers on-call question
 
 <img src="docs/screenshots/landing.png" alt="Lethe landing — On-call memory that forgets the stale stuff" width="100%">
 
+### ⚡ [**Try it live → vinayaksonthalia-lethe.hf.space**](https://vinayaksonthalia-lethe.hf.space)
+
+No signup. Ask *"If auth-service latency is high, what should I check?"* → decommission `legacy-cache` in **Systems** (watch the receipt) → ask the **exact same question** again — the answer flips. Then hit **Re-arm the demo** and run it as many times as you like.
+
 </div>
 
 ---

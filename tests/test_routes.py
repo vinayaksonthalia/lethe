@@ -125,6 +125,16 @@ def test_mutating_route_fails_closed_for_remote_client(ready_app):
     assert "not configured for remote access" in r.json()["detail"]
 
 
+def test_public_demo_mode_allows_remote_readonly(ready_app, monkeypatch):
+    # LETHE_PUBLIC_DEMO=1 (hosted demo) opts out of the remote fail-closed gate — an
+    # anonymous remote caller can use the API (rate limiting is the abuse guard there).
+    monkeypatch.setattr(ready_app, "_PUBLIC_DEMO", True)
+    remote = TestClient(ready_app.app)  # non-loopback client host
+    r = remote.get("/systems?workspace=incidents")
+    assert r.status_code == 200
+    assert any(s["name"] == "legacy-cache" for s in r.json()["systems"])
+
+
 def test_mutating_route_allowed_for_loopback_client(loopback_client, ib_mod, monkeypatch):
     # Sibling assertion to the above: the SAME route, from loopback, passes the gate.
     # /forget reads the graph BEFORE the n==0 shortcut, so stub _graph_counts (would
