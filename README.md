@@ -2,7 +2,7 @@
 
 <img src="docs/screenshots/banner.gif" alt="Lethe — on-call memory that forgets, and proves it" width="100%">
 
-It remembers your team's runbooks across every session, answers on-call questions from a knowledge **graph** (not a pile of disconnected facts), and — the part almost everyone skips — it can **forget** a decommissioned system so it never gives 3 a.m. advice about something you killed last quarter.
+It remembers your team's runbooks, answers on-call questions from a knowledge **graph**, and — the part almost everyone skips — **forgets** a decommissioned system so it never gives 3 a.m. advice about something you killed last quarter.
 
 ![Cognee 1.1.3](https://img.shields.io/badge/built%20on-Cognee%201.1.3-7c5cff) ![Python 3.12](https://img.shields.io/badge/python-3.12-3776ab) ![FastAPI](https://img.shields.io/badge/FastAPI-stdio%20%2B%20web-009688) ![Self-hosted](https://img.shields.io/badge/self--hosted-offline%20capable-22c55e) ![MCP](https://img.shields.io/badge/MCP-Claude%20%2F%20Cursor-f59e0b)
 
@@ -12,207 +12,73 @@ It remembers your team's runbooks across every session, answers on-call question
 
 ### ⚡ [**Try it live → vinayaksonthalia-lethe.hf.space**](https://vinayaksonthalia-lethe.hf.space)
 
-No signup. Ask *"If auth-service latency is high, what should I check?"* → decommission `legacy-cache` in **Systems** (watch the receipt) → ask the **exact same question** again — the answer flips. Then hit **Re-arm the demo** and run it as many times as you like.
+Ask *"If auth-service latency is high, what should I check?"* → decommission `legacy-cache` in **Systems** → ask the **same question** again — the answer flips. **Re-arm the demo** to run it again.
 
 </div>
 
 ---
 
-## The one-sentence version
+## What it is
 
-> Drop in messy runbooks and post-mortems → Cognee builds a knowledge graph + vector index from the prose with **no schema** → ask plain on-call questions and get grounded answers → and when a system is decommissioned, **forget it** (a real hard delete, with a measured receipt) so the same question stops giving the stale advice.
+> Drop in messy runbooks → Cognee builds a knowledge graph + vector index from the prose, **no schema** → ask plain on-call questions, get grounded, cited answers → and when a system is decommissioned, **forget it** — a real hard delete with a measured receipt — so the same question stops giving stale advice.
 
-**Memory that stays current instead of rotting.**
-
-<sub>Jump to: [Judging criteria](#how-it-maps-to-the-judging-criteria) · [The hero](#the-hero-the-same-question-before-and-after) · [How it works](#how-it-works) · [Two layers of forgetting](#two-layers-of-forgetting-hard-delete-and-soft-decay) · [Everything it does](#everything-it-does) · [Quickstart](#quickstart) · [MCP](#use-it-from-your-editor-mcp) · [Research story](#the-research-story-why-we-trust-the-hero) · [Honest limits](#honest-limits-what-we-dont-claim)</sub>
+**Memory that stays current instead of rotting.** Everyone builds AI memory that accumulates; Lethe ships the half nobody does — *verifiable forgetting, as a first-class feature*.
 
 ---
 
-## How it maps to the judging criteria
-
-| Criterion | Where Lethe earns it |
-|---|---|
-| **Best Use of Cognee** | Uses the *whole* lifecycle — `add` + `cognify` → graph+vectors, `GRAPH_COMPLETION` search, hard `forget`, feedback-weight `demote`/`restore` — plus an upstream PR back to Cognee ([decay_memory #3443](https://github.com/topoteretes/cognee/pull/3443)). See [Built on Cognee's full memory loop](#built-on-cognees-full-memory-loop). |
-| **Creativity** | `forget` as the first-class hero — with a measured deletion receipt and a blind-judged benchmark — in a field of accumulate-more apps. See [The hero](#the-hero-the-same-question-before-and-after). |
-| **Impact** | Kills the 3 a.m. stale-runbook failure mode (Reddit's Pi-Day outage is the canonical example). See [Why this exists](#why-this-exists). |
-| **Technical Excellence** | Graph+vector hybrid, local $0 embeddings, an independent blind-judge benchmark, self-heal curation loop, opt-in auth, MCP + Claude Code plugin. See [The research story](#the-research-story-why-we-trust-the-hero). |
-| **UX** | Editorial dashboard, streamed answers with citations, a live theme-aware graph, one-click decommission with a receipt. See [Everything it does](#everything-it-does). |
-| **Presentation** | This README, the [90-second demo beat](#the-hero-the-same-question-before-and-after), and the honest [limits](#honest-limits-what-we-dont-claim). |
-
-> **We report our negative results, too.** We gauntleted three Cognee differentiators against plain RAG at temperature 0 — **only `forget` held**; multi-hop tied and self-improvement didn't beat baseline, so we *demoted* both. We even threw out our own first benchmark for being circular, and killed a chain-of-thought retriever that was 38× slower for no gain. The honest version is the whole [research story](#the-research-story-why-we-trust-the-hero).
-
----
-
-## Why this exists
-
-Two things are wrong with how most AI "memory" works today, and Lethe is built around both:
-
-**1. Plain AI memory remembers *facts* but forgets *relationships*.**
-Vector/RAG memory stores each chunk as an isolated fact and, at recall, fetches the nearest few. It can tell you *"legacy-cache is a memcached store"* and *"auth-service latency is high"* as two separate facts — but it can't traverse *"legacy-cache **sits in front of** auth-service, and **caused** the login outage."* The edges — the part that actually matters during an incident — vanish. Cognee fixes this by extracting a real **knowledge graph** alongside the vectors.
-
-**2. Memory that only ever *grows* becomes its own hangover.**
-Everyone races to remember *more*. But a runbook that was right 18 months ago, for a system you've since retired, is worse than no memory at all — you follow it at 3 a.m. and it sends you down a dead path. The cure isn't more memory; it's **curation** — and the sharpest tool for that is the one operation nearly every "AI memory" product treats as an afterthought: **`forget`.**
-
-Lethe leans all the way into both. It's the contrarian primitive made into a product: *verifiable forgetting, as a first-class feature.*
-
----
-
-## The hero: the same question, before and after
-
-This is the whole pitch in 15 seconds. Ask one question, forget one system, ask the **byte-identical** question again — and watch the answer change on its own.
+## The hero beat
 
 ```
-You: If auth-service latency is high, what should I check?
-
-Lethe: Check the legacy-cache — flush and resize the legacy-cache cluster to
-       recover, as it sits in front of the auth-service session reads.
-       Sources: auth-service, session-store, legacy-cache
+You:   If auth-service latency is high, what should I check?
+Lethe: Check the legacy-cache — flush and resize the cluster, as it sits
+       in front of the auth-service session reads.
 ```
 
-Now `legacy-cache` gets decommissioned. Lethe hard-deletes it and shows a **receipt** of exactly what was removed:
+Decommission `legacy-cache` → Lethe hard-deletes it and prints a **receipt**:
 
 ```
-Decommissioned 'legacy-cache' — forgot 2 documents from the graph + vectors.
-
-Proof of Forgetting — measured removal:
-  • documents removed:      2
-  • graph nodes removed:    10
-  • relationships removed:  18
-Re-query proof — "What is legacy-cache?":
-  "It is not documented in the runbooks."
+Forgot 2 documents · 10 graph nodes · 18 relationships · 0 chunks left in the index
+Re-query proof — "What is legacy-cache?" → "It is not documented in the runbooks."
 ```
 
 Ask the **exact same question** again:
 
 ```
-You: If auth-service latency is high, what should I check?
-
 Lethe: Check the session-store connection pool and its hit rate — the
        auth-service reads session state directly from the session-store.
 ```
 
-The advice **flipped to the current system**, with zero re-prompting and no trace of the forgotten one. That's not a soft filter or a re-ranked exclusion — the documents, the 10 graph nodes, the 18 relationships, and the vectors are *gone*, and Lethe proves it.
-
-> No competitor surfaces deletion like this. Azure's SRE agent and Graphiti *soft-invalidate*; mem0 has a forgetting policy but it's hosted-only. Lethe does **entity-level, verifiable, self-hosted** hard-delete — and shows you the measured diff.
+The advice **flipped to the live system**. Not a soft filter — the docs, nodes, edges, and vectors are *gone*, and Lethe proves it. (Azure SRE Agent and Graphiti soft-invalidate; mem0's forgetting is hosted-only. Lethe's is entity-level, verifiable, self-hosted.)
 
 ---
-
-<div align="center">
-
-<img src="docs/screenshots/triage.png" alt="Triage answer with source citations" width="92%">
-
-<em>That exact answer in the app — graph-grounded, with the source runbooks it drew from.</em>
-
-</div>
 
 ## How it works
 
-One `cognify()` pass turns plain prose into **two stores that are queried together** — a graph for *structure* and vectors for *relevance*. The LLM is the final combiner; there's no numeric score fusion.
-
 ```mermaid
 flowchart TD
-    DOCS["Messy prose<br/>runbooks · post-mortems · ownership notes"]
-    DOCS -->|"cognee.add()"| RAW["Raw documents stored"]
-    RAW -->|"cognee.cognify()<br/>one LLM extraction pass"| EX{"Extract entities<br/>+ relationships"}
-    EX --> GRAPH[("Knowledge graph — Kùzu<br/>typed nodes + edges")]
-    EX --> VEC[("Vectors — LanceDB<br/>local fastembed, 384-dim, $0")]
-
-    Q["On-call question"] -->|"embed → nearest chunks"| VEC
-    VEC -->|"entry doors"| CTX["Assembled context"]
-    GRAPH -->|"traverse connections"| CTX
-    CTX -->|"TRIAGE_PROMPT + context + question"| LLM["LLM writes one grounded answer"]
-
-    F["Decommission a system<br/>cognee.forget() — hard delete"]
-    F -.->|"removes docs · nodes · edges · vectors"| GRAPH
+    DOCS["Messy prose — runbooks · post-mortems"] -->|"add() + cognify()"| EX{"LLM extracts entities<br/>+ relationships"}
+    EX --> GRAPH[("Graph — Kùzu")]
+    EX --> VEC[("Vectors — LanceDB<br/>local fastembed, $0")]
+    Q["On-call question"] --> VEC -->|"relevant chunks"| CTX["Context"]
+    GRAPH -->|"connected facts"| CTX
+    CTX -->|"TRIAGE_PROMPT"| LLM["One grounded answer"]
+    F["forget() — hard delete"] -.->|"docs · nodes · edges · vectors"| GRAPH
     F -.-> VEC
-    F --> RECEIPT["Measured receipt<br/>+ live re-query proof"]
-
-    style F fill:#b5432f,color:#fff
-    style LLM fill:#13241a,color:#a9e6c0
-    style RECEIPT fill:#13241a,color:#a9e6c0
-```
-
-- **Graph = Kùzu** — nodes + edges, for *"what's connected"* (and what coreference-merged into one entity across docs).
-- **Vectors = LanceDB** — chunk embeddings via **local** `BAAI/bge-small-en-v1.5` (fastembed). Fully offline, **zero embedding quota** — only the LLM calls cost anything.
-- **Answers come from `TRIAGE_PROMPT`, not phrasing.** Cognee's default completion prompt says *"be as brief as possible,"* which collapses under-specified questions to a bare fragment. Our `system_prompt` override makes short, natural on-call questions return a concise, full answer — while its "say so plainly" clause keeps a *forgotten* system honestly answering *"not documented"* (that clause protects the hero).
-
-Want the deep version? Every stage is a flowchart in [`learning/01-how-it-works/`](learning/01-how-it-works/00-overview-the-pipeline.md).
-
-<div align="center">
-
-<img src="docs/screenshots/graph.gif" alt="The live knowledge graph: physics settling, hover halo, click for blast radius" width="92%">
-
-<em>The live graph Cognee builds from plain prose — physics settling in, hover to trace, click a node for its blast radius. These edges are exactly what plain vector memory forgets.</em>
-
-</div>
-
----
-
-## Built on Cognee's *full* memory loop
-
-Most projects use one or two of Cognee's operations. Lethe uses the whole lifecycle — **remember → recall → forget** — and treats `forget` as the headline, not a footnote.
-
-```mermaid
-flowchart LR
-    R["REMEMBER<br/>add + cognify<br/>runbooks → graph"] --> C["RECALL<br/>GRAPH_COMPLETION<br/>grounded triage answers"]
-    C --> F["FORGET<br/>verifiable hard-delete<br/>+ measured receipt"]
-    F -->|"keeps memory current"| R
     style F fill:#b5432f,color:#fff
 ```
 
-And on top of the loop, a **memory-hygiene layer** that's genuinely ahead of the canonical Cognee "Company Brain" starter (which defers contradiction-detection and recency to a future version — we ship them now):
+- **Vectors find what's relevant, the graph adds what's connected, the LLM writes one answer** — grounded by a custom `TRIAGE_PROMPT` that names systems, cites sources, and answers *"not documented"* instead of hallucinating.
+- **Two layers of forgetting:** hard `forget` (permanent, receipted) + reversible **demote** via Cognee's feedback weights — a human-gated curation cycle sinks aging knowledge automatically and queues hard deletes for approval. It never deletes on its own.
+- Deep dives on every stage: [`/learn`](https://vinayaksonthalia-lethe.hf.space/learn) (served in-app) or [`learning/`](learning/README.md).
 
-- **Curation trilogy** — *stale references* (docs still mentioning a decommissioned system) + *contradictions* (runbooks that disagree) + *aging* (overdue for review). Two are deterministic and **0-token**; the contradiction scan is a **bounded** LLM pass (capped, with the cost printed in the UI).
-- **Detection → action** — aging findings have a one-click **"Mark reviewed"** that refreshes the date *and* lands on the memory timeline. It's a workflow, not just a report.
-- **Memory timeline** — a durable audit log of everything learned, reviewed, and forgotten — and *when*. Every forget lands here with its receipt. (The GDPR / right-to-be-forgotten angle: *prove what you forgot, and when.*)
+## What's in the app
 
-Together they close the loop most "AI memory" never does: **detect → act → record** — the graph doesn't just store, it stays honest.
-
-### Two layers of forgetting: hard delete *and* soft decay
-
-Hard `forget` is the permanent, GDPR-shaped answer. But most stale knowledge doesn't need deleting — it needs to *sink*. So Lethe adds a second, reversible layer built on Cognee's **feedback-weight** subsystem (`set_node_feedback_weights` + `feedback_influence`):
-
-- **Demote** — an aging runbook's nodes are down-weighted so they stop surfacing in answers, but nothing is deleted. It can be **restored** at any time.
-- **The curation cycle** — one bounded, human-gated pass over every runbook by review-age: mildly overdue → auto-demote, very overdue → auto-demote **and** queue a hard-delete *proposal for a human*. It **never deletes on its own** (that solves the absent-approver problem: stale advice sinks automatically; permanent removal always waits for a person). The dry-run preview costs **0 tokens**.
-- **Self-heal** — mark a demoted runbook reviewed and it auto-restores. The loop closes itself.
-
-This isn't speculative: Cognee's founder, asked how he thinks about forgetting, said *"naturally fading is the most effective, but over time memory maintenance will likely be added to the mix."* That's exactly these two layers — **demote** is the natural fade, the **curation cycle** is the maintenance. Lethe ships both today.
-
-```mermaid
-flowchart LR
-    R["REMEMBER<br/>add + cognify"] --> C["RECALL<br/>GRAPH_COMPLETION"]
-    C --> D["DEMOTE<br/>feedback-weight decay<br/>(reversible)"]
-    D -->|"re-reviewed"| C
-    D -->|"very stale → queue"| F["FORGET<br/>verifiable hard-delete"]
-    F -->|"keeps memory current"| R
-    style F fill:#b5432f,color:#fff
-    style D fill:#1d2b3a,color:#cfe6ff
-```
-
-> The capability audit — what Cognee's installed `1.1.3` actually exposes, what we use, and what we deliberately *don't* (and why) — is in [`learning/07`](learning/07-cognee-capability-audit.md). It even documents two experiments we **killed** (chain-of-thought retrieval was 38× slower for no gain; a raw-context evidence panel would have broken our trust model). Saying "no" with evidence is part of the work.
-
----
-
-## Everything it does
-
-| Area | What you get |
-|---|---|
-| **Triage chat** | Graph-grounded answers **streamed token-by-token** with clickable **source citations**; multi-turn context; persistent per-workspace threads; honest "not documented" on off-domain questions (no hallucination); 60s timeout + Retry so a stalled model never freezes the chat. |
-| **Proof of Forgetting** | Decommission → confirm → measured receipt (docs / nodes / edges removed) → live re-query proof. |
-| **Curation** | Stale-reference + contradiction + aging scans, each labeled by token cost; the view opens as a live dashboard (free scans auto-run, the paid one stays opt-in). |
-| **Memory timeline** | Chronological audit log of add / review / forget events; forgets carry their receipt. |
-| **Knowledge graph** | Obsidian-style, degree-sized, hover-to-trace; **click a node** for a plain-text panel of its real connections (`legacy-cache → caused → memory eviction storm → impacted → login system`). |
-| **Workspaces** | Isolated knowledge bases, each with its own graph + ledger; fail-closed routing (a stale id can never corrupt the golden graph); hard-delete on workspace removal. |
-| **Bring your own key** | Swap LLM provider at runtime (OpenAI / Anthropic / OpenRouter / Groq / Ollama / custom) — validated and **auto-reverted** if the key is bad, so a typo can't break the running app. |
-| **Runs offline** | Local fastembed embeddings + a local Ollama model = nothing leaves your machine. |
-| **Callable over MCP** | `triage`, `decommission`, curation, timeline exposed as MCP tools — use Lethe from Claude Code / Cursor without a browser. |
-
-A flowchart for every one of these lives in [`learning/06-the-product-now.md`](learning/06-the-product-now.md).
+**Triage chat** (streamed, cited) · **Proof-of-Forgetting receipts** + erasure certificates · **Curation** (stale-refs, contradictions, aging — mostly 0-token) · **Memory timeline** (audit log of learn/review/forget) · **Live knowledge graph** (hover for blast radius) · **Workspaces** · **Bring-your-own-key** (any OpenAI-compatible or Ollama — fully offline capable) · **MCP server** for Claude Code / Cursor.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/curation.gif" alt="Curation: health score, decay-cycle preview, reversible demotes"><br><em align="center">Curation — the health score, a free cycle preview, and reversible demotes (amber in Systems + Graph).</em></td>
-<td width="50%"><img src="docs/screenshots/timeline.png" alt="Memory timeline"><br><em>Memory timeline — a durable audit log of what was learned, reviewed, and forgotten.</em></td>
+<td width="50%"><img src="docs/screenshots/graph.gif" alt="Live knowledge graph"><br><em>The graph Cognee builds from plain prose — click a node for its blast radius.</em></td>
+<td width="50%"><img src="docs/screenshots/curation.gif" alt="Curation"><br><em>Curation — health score, decay-cycle preview, reversible demotes.</em></td>
 </tr>
 </table>
 
@@ -220,68 +86,26 @@ A flowchart for every one of these lives in [`learning/06-the-product-now.md`](l
 
 ## Quickstart
 
-> Requires Python 3.12. Bring **one** OpenAI-compatible LLM key — tested end-to-end on **Groq's free tier** with `openai/llama-3.3-70b-versatile`. Embeddings run locally (`fastembed`) — no embedding key, no embedding cost. Pinned to **Cognee 1.1.3**.
+> Python 3.12 · one OpenAI-compatible LLM key (Groq free tier works) · embeddings are local & free · pinned to Cognee 1.1.3.
 
 ```bash
-git clone https://github.com/<your-username>/lethe.git && cd lethe
-
-# 1. create the venv + install deps (uv recommended; plain venv+pip works too)
-uv venv && uv pip install -r requirements.txt
-#   or:  python3.12 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-
-# 2. add ONE LLM key (embeddings are local — nothing else needed)
-cp .env.example .env      # then paste a Groq key into LLM_API_KEY
-
-# 3. one-time cold build — ingests the demo runbooks + builds the graph (~1 min)
-./.venv/bin/python scripts/setup.py
-
-# 4. run the app — starts INSTANTLY (loads the prebuilt graph, no cognify at serve time)
-./.venv/bin/python -m uvicorn app:app --port 8077
-#    → http://localhost:8077  (landing)  ·  http://localhost:8077/app  (dashboard)
-
-# reset the demo to the golden build any time (instant, zero quota — restores the snapshot)
-./.venv/bin/python scripts/reset_demo.py
+git clone https://github.com/vinayaksonthalia/lethe.git && cd lethe
+uv venv && uv pip install -r requirements.txt      # or python3.12 -m venv + pip
+cp .env.example .env                                # paste one LLM key
+./.venv/bin/python scripts/setup.py                 # one-time build (~1 min)
+./.venv/bin/python -m uvicorn app:app --port 8077   # instant start → localhost:8077
+./.venv/bin/python scripts/reset_demo.py            # reset demo any time (instant)
 ```
 
-**No key yet?** The app still starts and the prebuilt graph loads: **Systems**, **Graph**, **Timeline**, and the free **Curation** scans all work offline. Only the parts that call the model — **Triage chat**, **Upload/ingest**, and the forget re-query proof — need a key.
+No key? The app still runs — Systems, Graph, Timeline, and the free Curation scans work offline; only chat/ingest need a model. Deploy your own: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
-Then run [the demo beat](#the-hero-the-same-question-before-and-after) — ask, decommission `legacy-cache`, ask again. Reset any time with `scripts/reset_demo.py`. Full hands-on guide: [Using Lethe](https://vinayaksonthalia-lethe.hf.space/learn#using-lethe.md) · deploying your own: [`docs/DEPLOY.md`](docs/DEPLOY.md).
-
----
-
-## Use it from your editor (MCP)
-
-Lethe's memory is callable as MCP tools, so an on-call engineer can triage from inside Claude Code or Cursor.
-
-```bash
-# with the app running on :8077, register the server (works from any directory):
-claude mcp add -s user lethe -- /abs/path/.venv/bin/python /abs/path/mcp_server.py
-
-# then, in a claude session:
-#   "Use lethe to triage: auth-service latency is high, what should I check?"
-#   → calls mcp__lethe__triage and answers from Lethe's graph memory.
-
-# zero-setup sanity check (no client needed):
-./.venv/bin/python scripts/try_mcp.py
-```
-
-Tools exposed: `triage` · `decommission_system` · `list_systems` · `curation_scan` · `check_conflicts` · `mark_reviewed` · `memory_timeline` · `list_workspaces`. Full setup + design notes: [`learning/08-mcp-server.md`](learning/08-mcp-server.md).
-
-**Or install it as a Claude Code plugin.** [`lethe-plugin/`](lethe-plugin/) bundles the MCP server *and* an `incident-triage` **skill** that teaches an agent the whole beat — triage → decommission → re-ask the same question and watch it flip. One-line install from the repo:
-
-```
-/plugin marketplace add <path-to-repo>   &&   /plugin install lethe@lethe-marketplace
-```
-
-Details in [`lethe-plugin/README.md`](lethe-plugin/README.md).
+**MCP:** `claude mcp add -s user lethe -- /abs/path/.venv/bin/python /abs/path/mcp_server.py` → then *"Use lethe to triage: auth-service latency is high."* Tools: `triage` · `decommission_system` · `curation_scan` · `memory_timeline` + more ([details](learning/08-mcp-server.md)). Or install the bundled [Claude Code plugin](lethe-plugin/README.md).
 
 ---
 
 ## The research story (why we trust the hero)
 
-We didn't assume `forget` was the differentiator — we tested three Cognee capabilities against plain RAG at temperature 0 and reported the losers: **multi-hop** tied at demo scale (*killed*), **self-improvement** didn't beat the baseline (*demoted*), and **`forget` held** — verified structurally (zero residue in retrieved context) and behaviorally (20/20, plus adversarial probes).
-
-Then we measured forgetting itself — **twice** — with an independent blind judge: a *different model family* scores every answer 0–2 against known-correct guidance. It grades **correctness, not word-absence** (our first benchmark graded word-absence, which is circular, so we threw it out).
+We tested three Cognee capabilities against plain RAG at temperature 0 and **reported the losers**: multi-hop tied at demo scale, self-improvement didn't beat baseline — only **`forget` held**. Then we measured forgetting **twice** with an independent blind judge (different model family, scores correctness 0–2):
 
 | Judged 0–2, before → after forget | Run 1 · 18 docs, 3 forgets | Run 2 · 27 docs, 6 forgets |
 |---|---|---|
@@ -290,71 +114,28 @@ Then we measured forgetting itself — **twice** — with an independent blind j
 | **Abstention** — says *"not documented"* | 0.0 → 0.67 | 0.0 → 1.0 |
 | **Index-level deletion proof** | ✓ 3/3 | ✓ 6/6 |
 
-Run 1: system `llama-3.3-70b`, judge `gemini-2.5-flash`. Run 2 — a full replication with a different pair — system `zai-glm-4.7` (the live demo's model), judge `gpt-oss-120b`. Per-question data: [`results.json`](research/forget_correctness_results.json) · [`results_n6.json`](research/forget_correctness_results_n6.json); the landing's *"Forgetting, proven"* panel serves run 1 live. One rate-limit-corrupted attempt was **discarded, not published** — the fix is in the [benchmark script](research/forget_correctness_benchmark.py).
+Per-question data in [`research/`](research/forget_correctness_results.json); our first benchmark was thrown out for being circular, and one rate-limit-corrupted run was discarded, not published. Full story: [`learning/05`](learning/05-the-research-story/what-we-tested-and-killed.md). We also contributed upstream: [cognee#3443](https://github.com/topoteretes/cognee/pull/3443) (`decay_memory`).
 
-Nuances we report rather than hide: some forgotten systems *redirect to their replacement* instead of abstaining, and the stronger model partially resists stale bait even before the forget. Full story: [`learning/05`](learning/05-the-research-story/what-we-tested-and-killed.md).
+## Honest limits
 
----
-
-## Honest limits (what we don't claim)
-
-- **Not "the only ones who can forget."** mem0 ships a forgetting policy too — ours is the *product*: entity-level, verifiable, self-hosted, workflow-wired.
-- **Security modes are explicit opt-ins.** Local runs open (loopback only, fail-closed to remote); `LETHE_AUTH_TOKEN` gates a private deploy; `LETHE_PUBLIC_DEMO=1` runs the hosted demo anonymous + rate-limited with the model config locked. Single-instance guards, not RBAC.
-- **Single-tenant by design** — one instance per team, early-Grafana style. Workspaces isolate graphs; org accounts/RBAC are the enterprise layer on top, not a missing bolt.
-- **Chat threads are client-side** (`localStorage`, per-device). Server-side sessions are roadmap.
-- **Citations are name-match provenance**, not a scored retrieval trace — honest about *which* runbooks were used, no invented ranking.
-- **The benchmark is directional, not a p-value** — two blind-judged runs (3 forgets/18 docs, replicated at 6/27 with a different model pair): real and surgical, not "proven at scale."
-- **Pinned to Cognee 1.1.3.** 1.2.x's structured graph build needs a tighter custom `graph_model` first — scoped in [`learning/07`](learning/07-cognee-capability-audit.md).
-- **One soft edge:** a question about an undocumented *facet* of a documented system can over-point to its runbook instead of abstaining. An LLM limit; documented, not hidden.
+Forgetting deletes from the **corpus**, not the model's training priors (we verify behaviorally too) · single-tenant by design (workspaces isolate; RBAC is roadmap) · citations are name-match provenance, not scored traces · benchmark is directional, not a p-value · pinned to 1.1.3 (1.2.x upgrade scoped in [`learning/07`](learning/07-cognee-capability-audit.md)).
 
 ---
 
-## Project map
+## Project map & stack
 
 ```
-incident_brain.py     core loop: ingest() · ask() · forget_system() · TRIAGE_PROMPT
-app.py                FastAPI app (:8077) — all endpoints, incl. /learn (in-app docs)
-templates/            the page shells — landing.html · app.html · learn.html
-Dockerfile            the live-demo image: golden graph baked at build, key via env
-mcp_server.py         MCP server (stdio) — thin proxy exposing Lethe's tools
-scripts/              setup.py (cold build → ledger.json) · reset_demo.py (restore golden, instant) · dev tools (verify_clean · smoke_web · qa_harness · capture_screens · try_mcp)
-research/             one-off experiments & evidence (RAG-vs-graph · forget validation · feedback probes)
-learning/             the whole project explained twice over (kid + judge), with flowcharts
-  ├─ 00–05            big picture · how-it-works · cognee deep-dive · stack · Q&A · research story
-  ├─ 06-the-product-now.md         every feature as a control-flow flowchart  ← fastest orientation
-  ├─ 07-cognee-capability-audit.md  what Cognee offers vs what we use (+ killed experiments)
-  └─ 08-mcp-server.md               the MCP doorway
+incident_brain.py   core: ingest() · ask() · forget_system() · TRIAGE_PROMPT
+app.py              FastAPI app (:8077) + /learn in-app docs · templates/ page shells
+mcp_server.py       MCP server (stdio) · lethe-plugin/ Claude Code plugin
+scripts/            setup.py · reset_demo.py · dev tools     research/  experiments & evidence
+learning/           every design decision explained, with flowcharts (served at /learn)
 ```
 
-The `learning/` folder isn't an afterthought — it's verified against the running app and Cognee's source, and it's served as the product's own docs at [`/learn`](https://vinayaksonthalia-lethe.hf.space/learn). Start there, or at [`learning/README.md`](learning/README.md).
-
----
-
-## Roadmap
-
-- ~~Deploy it~~ **Deployed & documented** — the [live demo](https://vinayaksonthalia-lethe.hf.space) runs the Dockerfile in this repo (golden graph baked at build, keep-alive pinger, hosted-demo mode), and [`docs/DEPLOY.md`](docs/DEPLOY.md) covers Docker / HF Spaces / Render, the three security modes, and sizing. (Upstreaming it would close [cognee-integrations#89](https://github.com/topoteretes/cognee-integrations/issues/89).)
-- **De-risk the Cognee 1.2.x upgrade** behind a tight custom `graph_model` (also cleans up extracted entities).
-- **Enterprise layer** — org accounts + RBAC and server-side chat sessions on top of the existing auth gate (turns single-tenant boxes into a managed multi-team deployment).
-- **Finish the `app.py` split** — the page shells moved to `templates/` already (3,272 → ~1,500 lines, byte-identical serving); route modules are the remaining post-hackathon step.
-- **Submission assets** — a <90s demo video built on the same-question-flip, and a blog ("I tested 3 Cognee differentiators at temp 0 — only `forget` held").
-
----
-
-## Stack
-
-| Layer | Choice | Why |
-|---|---|---|
-| Memory engine | **Cognee 1.1.3** | the full lifecycle in one API — `add` · `cognify` · `search` · `forget` |
-| Graph store | **Kùzu** | embedded property graph; the incident world as typed nodes + edges |
-| Vector store | **LanceDB** | file-based chunk embeddings — zero servers to run |
-| Embeddings | **fastembed** `bge-small-en-v1.5` | local, 384-dim, $0 — nothing leaves the box |
-| API & app | **FastAPI** + uvicorn | one process; page shells in `templates/` |
-| UI | **Tailwind** + Instrument Serif / Geist | editorial cool-blue, no build step |
-| Agent surface | **MCP** (FastMCP) | 10 tools callable from Claude Code / Cursor |
-| LLM | any OpenAI-compatible or **Ollama** | swappable at runtime; the live demo runs Cerebras `zai-glm-4.7` |
+**Cognee 1.1.3** (memory lifecycle) · **Kùzu** (graph) · **LanceDB** (vectors) · **fastembed** (local, $0) · **FastAPI** · **Tailwind** · **MCP**. LLM is swappable at runtime; the live demo runs Cerebras `zai-glm-4.7`.
 
 <div align="center">
 
-*Built for the WeMakeDevs × Cognee hackathon. Lethe — the river of forgetting.*
+*Built by Vinayak Sonthalia for the WeMakeDevs × Cognee hackathon. Lethe — the river of forgetting.*
 
 </div>
