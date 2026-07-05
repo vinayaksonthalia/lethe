@@ -89,17 +89,34 @@ flowchart TD
 > Python 3.12 · one OpenAI-compatible LLM key (Groq free tier works) · embeddings are local & free · pinned to Cognee 1.1.3.
 
 ```bash
+# 1. clone + install
 git clone https://github.com/vinayaksonthalia/lethe.git && cd lethe
-uv venv && uv pip install -r requirements.txt      # or python3.12 -m venv + pip
-cp .env.example .env                                # paste one LLM key
-./.venv/bin/python scripts/setup.py                 # one-time build (~1 min)
-./.venv/bin/python -m uvicorn app:app --port 8077   # instant start → localhost:8077
-./.venv/bin/python scripts/reset_demo.py            # reset demo any time (instant)
+uv venv && uv pip install -r requirements.txt        # or: python3.12 -m venv + pip
+
+# 2. add one LLM key
+cp .env.example .env                                 # paste it into LLM_API_KEY
+
+# 3. build the demo graph (one time, ~1 min)
+./.venv/bin/python scripts/setup.py
+
+# 4. run — starts instantly
+./.venv/bin/python -m uvicorn app:app --port 8077    # → http://localhost:8077
+```
+
+```bash
+# reset the demo to a clean state any time (instant, zero quota)
+./.venv/bin/python scripts/reset_demo.py
 ```
 
 No key? The app still runs — Systems, Graph, Timeline, and the free Curation scans work offline; only chat/ingest need a model. Deploy your own: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
-**MCP:** `claude mcp add -s user lethe -- /abs/path/.venv/bin/python /abs/path/mcp_server.py` → then *"Use lethe to triage: auth-service latency is high."* Tools: `triage` · `decommission_system` · `curation_scan` · `memory_timeline` + more ([details](learning/08-mcp-server.md)). Or install the bundled [Claude Code plugin](lethe-plugin/README.md).
+### Use it from your editor (MCP)
+
+```bash
+claude mcp add -s user lethe -- /abs/path/.venv/bin/python /abs/path/mcp_server.py
+```
+
+Then: *"Use lethe to triage: auth-service latency is high."* Tools: `triage` · `decommission_system` · `curation_scan` · `memory_timeline` + more ([details](learning/08-mcp-server.md)). Or install the bundled [Claude Code plugin](lethe-plugin/README.md).
 
 ---
 
@@ -114,7 +131,7 @@ We tested three Cognee capabilities against plain RAG at temperature 0 and **rep
 | **Abstention** — says *"not documented"* | 0.0 → 0.67 | 0.0 → 1.0 |
 | **Index-level deletion proof** | ✓ 3/3 | ✓ 6/6 |
 
-Per-question data in [`research/`](research/forget_correctness_results.json); our first benchmark was thrown out for being circular, and one rate-limit-corrupted run was discarded, not published. Full story: [`learning/05`](learning/05-the-research-story/what-we-tested-and-killed.md). We also contributed upstream: [cognee#3443](https://github.com/topoteretes/cognee/pull/3443) (`decay_memory`).
+Per-question data in [`research/`](research/forget_correctness_results.json); our first benchmark was thrown out for being circular, and one rate-limit-corrupted run was discarded, not published. Full story: [`learning/05`](learning/05-the-research-story/what-we-tested-and-killed.md).
 
 ## Honest limits
 
@@ -122,7 +139,7 @@ Forgetting deletes from the **corpus**, not the model's training priors (we veri
 
 ---
 
-## Project map & stack
+## Project map
 
 ```
 incident_brain.py   core: ingest() · ask() · forget_system() · TRIAGE_PROMPT
@@ -132,7 +149,18 @@ scripts/            setup.py · reset_demo.py · dev tools     research/  experi
 learning/           every design decision explained, with flowcharts (served at /learn)
 ```
 
-**Cognee 1.1.3** (memory lifecycle) · **Kùzu** (graph) · **LanceDB** (vectors) · **fastembed** (local, $0) · **FastAPI** · **Tailwind** · **MCP**. LLM is swappable at runtime; the live demo runs Cerebras `zai-glm-4.7`.
+## Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Memory engine | **Cognee 1.1.3** | the full lifecycle in one API — `add` · `cognify` · `search` · `forget` |
+| Graph store | **Kùzu** | embedded property graph; the incident world as typed nodes + edges |
+| Vector store | **LanceDB** | file-based chunk embeddings — zero servers to run |
+| Embeddings | **fastembed** `bge-small-en-v1.5` | local, 384-dim, $0 — nothing leaves the box |
+| API & app | **FastAPI** + uvicorn | one process; page shells in `templates/` |
+| UI | **Tailwind** + Instrument Serif / Geist | editorial cool-blue, no build step |
+| Agent surface | **MCP** (FastMCP) | 10 tools callable from Claude Code / Cursor |
+| LLM | any OpenAI-compatible or **Ollama** | swappable at runtime; the live demo runs Cerebras `zai-glm-4.7` |
 
 <div align="center">
 
