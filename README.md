@@ -162,6 +162,10 @@ learning/           every design decision explained, with flowcharts (served at 
 | Agent surface | **MCP** (FastMCP) | 10 tools callable from Claude Code / Cursor |
 | LLM | any OpenAI-compatible or **Ollama** | swappable at runtime; the live demo runs Cerebras `zai-glm-4.7` |
 
+## AI assistance disclosure
+
+This project was built with **Claude Code** (Anthropic) as an AI pair-programmer — used throughout for implementation, debugging, the benchmark harness, docs, and content. Every architectural decision, the core thesis (verifiable forgetting), and the verification of all results — including reading actual output strings, discarding the first circular benchmark, and re-proving forget both structurally and behaviorally — were owned and checked by me. AI accelerated the build; it didn't make the calls.
+
 <div align="center">
 
 *Built by Vinayak Sonthalia for the WeMakeDevs × Cognee hackathon. Lethe — the river of forgetting.*
