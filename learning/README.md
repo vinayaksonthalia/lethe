@@ -1,6 +1,6 @@
 # 📚 Lethe — Learning Folder
 
-This folder explains the whole project **twice over**: simply enough for a curious 10‑year‑old, and precisely enough for a hackathon judge. It also doubles as the raw material for the README, the demo script, and the blog — three of the remaining tasks are really just "expand what's written here."
+This folder explains the whole project **twice over**: simply enough for a curious 10‑year‑old, and precisely enough for a skeptical reader. It also doubles as the raw material for the README, the demo script, and the blog — three of the remaining tasks are really just "expand what's written here."
 
 Every file follows the same shape: **In one line → an everyday analogy → the real mechanics with real examples → why it matters → links to related files.** Diagrams are [Mermaid](https://mermaid.js.org/) (they render as real flowcharts on GitHub and in VS Code). Every fact here was verified against the running app and Cognee's source code — not paraphrased from memory.
 
@@ -32,7 +32,7 @@ flowchart TD
 ## How to read it (pick your path)
 
 - **"Explain it like I'm new"** → [What is this?](00-the-big-picture/what-is-this.md) → [The problem](00-the-big-picture/the-problem-static-memory-rots.md) → [What we built](00-the-big-picture/what-we-built.md) → [Newbie glossary](04-judge-and-learner-qa/newbie-glossary.md).
-- **"I'm a judge, give me substance fast"** → [What we built](00-the-big-picture/what-we-built.md) → [Judge questions answered](04-judge-and-learner-qa/judge-questions-answered.md) → [Why Cognee, not just RAG](02-cognee-deep-dive/why-cognee-not-just-rag.md) → [Honest limits](04-judge-and-learner-qa/honest-limits-what-we-dont-claim.md).
+- **"I'm a reader, give me substance fast"** → [What we built](00-the-big-picture/what-we-built.md) → [Reader questions answered](04-judge-and-learner-qa/judge-questions-answered.md) → [Why Cognee, not just RAG](02-cognee-deep-dive/why-cognee-not-just-rag.md) → [Honest limits](04-judge-and-learner-qa/honest-limits-what-we-dont-claim.md).
 - **"How does it actually work?"** → walk [01-how-it-works/](01-how-it-works/00-overview-the-pipeline.md) in order, 00 → 08.
 - **"Tell me the story"** → [What we tested and killed](05-the-research-story/what-we-tested-and-killed.md) → [The debugging saga](05-the-research-story/the-debugging-saga-and-lessons.md).
 
@@ -41,7 +41,7 @@ flowchart TD
 ## The map
 
 ### 00 · The big picture — _start here_
-- [what-is-this.md](00-the-big-picture/what-is-this.md) — the whole project, kid version then judge version
+- [what-is-this.md](00-the-big-picture/what-is-this.md) — the whole project, kid version then reader version
 - [the-problem-static-memory-rots.md](00-the-big-picture/the-problem-static-memory-rots.md) — why "remember everything" is the wrong goal
 - [what-we-built.md](00-the-big-picture/what-we-built.md) — the components + the hero beat, step by step
 - [is-the-research-done.md](00-the-big-picture/is-the-research-done.md) — done vs left; the cool things it can do; who it's for
@@ -68,7 +68,7 @@ flowchart TD
 - [the-triage-prompt-and-prompt-leverage.md](03-the-tech-stack/the-triage-prompt-and-prompt-leverage.md) — the one knob that changed everything
 - [determinism-and-the-golden-snapshot.md](03-the-tech-stack/determinism-and-the-golden-snapshot.md) — making the demo bulletproof
 
-### 04 · Judge & learner Q&A
+### 04 · Reader & learner Q&A
 - [judge-questions-answered.md](04-judge-and-learner-qa/judge-questions-answered.md) — the FAQ, grounded
 - [newbie-glossary.md](04-judge-and-learner-qa/newbie-glossary.md) — every term, in plain English
 - [honest-limits-what-we-dont-claim.md](04-judge-and-learner-qa/honest-limits-what-we-dont-claim.md) — what we deliberately don't claim

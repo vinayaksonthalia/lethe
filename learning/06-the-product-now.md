@@ -302,7 +302,7 @@ flowchart TD
 
 ## What's next (the shortlist, ranked)
 
-From the verified deep-research pass (`hackathon-winners-research.md` covers winning patterns; this shortlist is the feature direction):
+The feature direction, ranked:
 
 1. ~~**Source citations / provenance**~~ ✅ **DONE** (Flow 7) — the missing half of the thesis.
 2. ~~**Staleness-by-age (decay-lite)**~~ ✅ **DONE** — Tier 3 of the curation trilogy (Aging knowledge).

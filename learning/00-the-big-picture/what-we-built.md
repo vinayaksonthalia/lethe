@@ -128,32 +128,25 @@ We proved this forget **two ways**: structurally (`only_context` shows zero lega
 
 ---
 
-## What's done vs. what's left
+## What's built
 
-**Done (the hard part):**
+Everything the thesis needs, end to end:
 
-- All research and the hard build — ingest, ask, forget, ledger, snapshot/restore.
-- The two-store Cognee pipeline (Kùzu graph + LanceDB vectors) with local embeddings.
-- The verified forget hero (structural + behavioral).
+- The core loop — ingest, ask, forget, ledger, snapshot/restore.
+- The two-store Cognee pipeline (Kùzu graph + LanceDB vectors) with local, $0 embeddings.
+- The verified forget hero — proven both structurally *and* behaviorally.
 - The `TRIAGE_PROMPT` fix and the three controlled prompt experiments.
-- The FastAPI app with the chat page and the instant demo-reset flow.
-
-**Left (polish and presentation):**
-
-- UI polish on the chat page.
-- README.
-- Demo recording.
-- Blog post (the research saga is the spine — see [the-problem-static-memory-rots.md](the-problem-static-memory-rots.md)).
-- Optional PR upstream.
+- The FastAPI app — the chat page, the live graph / curation / timeline views, and the instant demo-reset flow.
+- The presentation layer — this in-app documentation, the README, the demo video, and the research write-up.
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **The architecture serves the thesis.** Hard-deletable, structured knowledge is what makes forget *real* rather than a soft hide — the build and the hero are not separate, they're cause and effect.
-- **Reset is judge-friendly.** Snapshot/restore means the hero beat is repeatable on demand, deterministically, with zero quota — no fragile live rebuild on stage.
+- **The architecture serves the thesis.** Hard-deletable, structured knowledge is what makes forget *real* rather than a soft hide — the build and the hero aren't separate, they're cause and effect.
+- **Determinism is a feature.** Snapshot/restore makes the hero beat repeatable on demand, deterministically, with zero quota — no fragile live rebuild.
 - **The prompt experiments show rigor.** Holding retrieval constant and varying one knob is real methodology, not vibes.
-- **It's genuinely Cognee.** The graph is *inferred from prose* with no schema; the answer fuses vector recall and graph structure. That's the "Best Use of Cognee" story.
+- **It's genuinely Cognee.** The graph is *inferred from prose* with no schema; the answer fuses vector recall and graph structure — Cognee's full remember / recall / forget loop, used as intended.
 
 ---
 

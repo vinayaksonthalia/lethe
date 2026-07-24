@@ -109,9 +109,9 @@ So: ingest is slow-ish and happens **once at build time**; serving is fast becau
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **The "wow" is the absence of work.** We point at 18 blobs of messy prose and a graph appears — no schema designed, no doc tagged. That's the line that lands with a judge: *"I didn't define any of this structure; Cognee inferred it from the words."*
+- **The "wow" is the absence of work.** We point at 18 blobs of messy prose and a graph appears — no schema designed, no doc tagged. That's the line that lands with a reader: *"I didn't define any of this structure; Cognee inferred it from the words."*
 - **It sets up everything downstream.** The cross-doc answers, the blast-radius traversal, and the clean forget all depend on this pass having built a real graph from real prose.
 - **It's honest about cost.** Ingest is the one place we spend LLM quota; we built around that (local embeddings + snapshot/restore for demo resets) so the live demo spends almost nothing.
 

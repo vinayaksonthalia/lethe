@@ -6,9 +6,9 @@
 
 A good scientist doesn't say "my volcano model is perfect." They say "it predicts the lava, but it can't tell you the exact day, and here's why." That honesty is what makes people *believe* the parts that DO work. This page is our list of "here's what we can't do" — and saying it out loud is on purpose.
 
-## Why honesty is a strength (demo/judging)
+## Why honesty is a strength
 
-Judges have seen a hundred demos that overclaim. The fastest way to lose a sharp judge is to assert something the demo can't back up. We do the opposite: we draw a tight circle around what's **verified**, label everything else **by design** or **known limit**, and we *show* the limits ourselves before anyone has to find them. The hero beat (**forget**) is rock-solid precisely because we didn't water it down with claims we can't defend.
+Readers have seen a hundred demos that overclaim. The fastest way to lose a sharp reader is to assert something the demo can't back up. We do the opposite: we draw a tight circle around what's **verified**, label everything else **by design** or **known limit**, and we *show* the limits ourselves before anyone has to find them. The hero beat (**forget**) is rock-solid precisely because we didn't water it down with claims we can't defend.
 
 ---
 
@@ -99,7 +99,7 @@ Both checks were necessary. Passing both is what lets us claim forget *honestly*
 
 ---
 
-## The one-paragraph version (for a judge in a hurry)
+## The one-paragraph version (for a reader in a hurry)
 
 It's **read-only advice**, not autonomous remediation. It reliably admits a **whole missing system** is gone, but can be **over-confident about a missing facet** of a system that has a runbook (a documented, non-prompt-fixable LLM limit). The post-forget answer's **invariant** ("no stale system") is what's stable, not its exact wording. At this **small corpus** the graph roughly ties plain RAG on simple lookups; **forget** is the clean, decisive differentiator. The prompt is our biggest lever but it **can't invent un-retrieved facts** or fully kill hallucination. And `forget` clears our **corpus**, not the model's **training priors** — which is why we proved it **both structurally and behaviorally.**
 

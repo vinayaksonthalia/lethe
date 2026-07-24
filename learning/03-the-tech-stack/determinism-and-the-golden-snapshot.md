@@ -96,10 +96,10 @@ A hard-won process lesson worth its own warning:
 - **A real incident:** an automated "is it good yet?" loop once hung for roughly 20 minutes against a throttled LLM backend, getting nowhere. The build was never the problem, so the loop could never "win".
 - **The discipline:** if answers are off, look at **retrieval** (`only_context`) and the **prompt**, not the build. Reset with the snapshot. Don't gamble compute on re-rolling the dice.
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **Reliability under pressure.** A live demo that resets in one second to a known-good state — zero quota, deterministic — is dramatically safer than one that re-bakes for a minute and might come out wrong or get rate-limited mid-show.
-- **It shows scientific honesty.** We name the red herring out loud: "we suspected the build, we were wrong, here's how we proved it." We distinguish "the build is non-deterministic" (true) from "non-determinism hurts answers" (false). Judges trust people who separate those cleanly.
+- **It shows scientific honesty.** We name the red herring out loud: "we suspected the build, we were wrong, here's how we proved it." We distinguish "the build is non-deterministic" (true) from "non-determinism hurts answers" (false). Readers trust people who separate those cleanly.
 - **It demonstrates real debugging maturity.** Killing a plausible-but-wrong hypothesis with a clean test (`only_context`), and refusing to throw compute at a problem the build can't cause, is exactly the engineering judgment the rules of this project are built around.
 
 ## Related

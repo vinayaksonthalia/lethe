@@ -76,9 +76,9 @@ A subtle but important point that we verified against Cognee 1.1.3 source: **the
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **It's one clean story end-to-end.** Prose in → graph+vectors → retrieve → one answer → *forget* → re-grounded answer. A judge can follow the whole thing on one screen.
+- **It's one clean story end-to-end.** Prose in → graph+vectors → retrieve → one answer → *forget* → re-grounded answer. Anyone can follow the whole thing on one screen.
 - **The hero is the rare leg.** Remember and learn are common; **forget** is the leg the official "companybrain" starter — and even Cognee's own integrations shelf — does not ship. That's our differentiation for "Best Use of Cognee."
 - **It's honest.** We don't claim magic. The LLM is the combiner (not a fusion algorithm); forget is a *hard delete* we verified two ways; and we state the limits (the model still has parametric priors; off-corpus questions can be over-confident). Honesty is a feature, not an apology.
 

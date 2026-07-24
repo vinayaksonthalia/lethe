@@ -23,7 +23,7 @@ A lazy kid would brag "my robot won everything!" A good scientist says "it won t
 
 ## Why we ran a bake-off at all
 
-The easy hackathon move is to pick a tool, list its feature bullets, and claim every bullet as your project's superpower. That produces demos that fall apart the moment a judge asks "show me."
+The easy hackathon move is to pick a tool, list its feature bullets, and claim every bullet as your project's superpower. That produces demos that fall apart the moment someone asks "show me."
 
 Our thesis pushed us the other way. The thesis is:
 
@@ -143,13 +143,13 @@ That's the whole project in three quotes: the assistant *changes its advice* bec
 
 ## The honest limit (we state it on purpose)
 
-Forget removes data from the **corpus**, not from the model's **parametric / training knowledge**. So "the graph is clean" alone is *not* proof the system forgot — the model could still reach into priors. That's the entire reason we proved forget **both** structurally *and* behaviorally. We don't claim we erased the concept of caches from a 70B model's brain; we claim we erased *this team's legacy-cache documents* from *this assistant's memory*, and we showed it stopped advising on them. That distinction is the kind of thing that wins trust with a sharp judge.
+Forget removes data from the **corpus**, not from the model's **parametric / training knowledge**. So "the graph is clean" alone is *not* proof the system forgot — the model could still reach into priors. That's the entire reason we proved forget **both** structurally *and* behaviorally. We don't claim we erased the concept of caches from a 70B model's brain; we claim we erased *this team's legacy-cache documents* from *this assistant's memory*, and we showed it stopped advising on them. That distinction is the kind of thing that wins trust with a sharp reader.
 
 A second residual limit: off-corpus questions about a *facet* of a system that *does* have a runbook (e.g. "what's the deploy process for `search-index`?") can be over-confident — the model points at the runbook instead of admitting that specific sub-step isn't written down. That's an LLM inference limit (telling "I have a doc about X" apart from "this doc answers *this* sub-question"), not something prompt-tuning fixes. We documented it and stopped tuning at that ceiling.
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
 Three reasons this "we killed three of four claims" story is an **asset**, not a confession:
 
@@ -157,7 +157,7 @@ Three reasons this "we killed three of four claims" story is an **asset**, not a
 
 2. **It explains our scope discipline.** We didn't sprawl across four half-working "superpowers." We found the one with a clean, reproducible, RAG-beating proof and built a tight hero demo around it. A focused demo that survives every "show me" beats a broad demo that crumbles on the first probe.
 
-3. **It pre-empts the toughest judge question.** When a judge asks "doesn't plain RAG do this?", we already have the answer: "for multi-hop and blast-radius at this scale, basically yes — and we'll show you the tie. For *forget*, here's the thing RAG-with-this-stack can't do, proven structurally and behaviorally." Honesty under questioning reads as competence.
+3. **It pre-empts the toughest question.** When someone asks "doesn't plain RAG do this?", we already have the answer: "for multi-hop and blast-radius at this scale, basically yes — and we'll show you the tie. For *forget*, here's the thing RAG-with-this-stack can't do, proven structurally and behaviorally." Honesty under questioning reads as competence.
 
 The build of the graph itself, by the way, is irrelevant to answer quality — that was a red herring we chased and abandoned (see the debugging saga). The high-leverage knobs turned out to be (a) *forget*, the structural win, and (b) the *prompt*, because the LLM is the combiner. Everything else was a tie we were honest about.
 

@@ -49,7 +49,7 @@ So Cognee sits exactly between the other two: it gives you the *structure* of a 
 
 ## The honest graph-vs-RAG story (no overclaiming)
 
-It would be easy to claim "the graph crushes RAG." That is **not** what we found, and pretending otherwise would be dishonest in a judged demo. The honest version:
+It would be easy to claim "the graph crushes RAG." That is **not** what we found, and pretending otherwise would be dishonest in a public demo. The honest version:
 
 - **At our small corpus (18 short docs), the graph layer adds little over vectors for simple lookups.** For a question like "who owns the payments-service?", plain vector recall already pulls the right chunk; **graph ≈ RAG** here. The graph's advantage is real but **grows with scale** and shows up most on **relationship / multi-hop questions** — exactly the cases where "what connects to X?" beats "what reads like X?"
 - This means the graph is not a magic win at demo scale. We say so plainly. That honesty is the spine of our blog post.
@@ -73,9 +73,9 @@ Because the retrieved context is **influence, not law** (the LLM can still confa
 
 > **The leg the starter lacks:** Cognee's own official "companybrain" starter does **not** ship a forget UX, and Cognee's integrations shelf ships none either. Forget is the one leg we add — and the one that most cleanly distinguishes a real *memory* system from a pile of embeddings.
 
-## Why it matters (demo / judging)
+## Why it matters
 
-A judge will (rightly) ask "isn't this just RAG?" Our answer is specific and honest: Cognee infers a graph from raw prose with **zero schema**, queries graph + vectors **together**, and — the part RAG fundamentally cannot do — performs a **true forget** that removes a system from memory at every layer. We don't claim the graph beats RAG at every turn; we claim it gives us *forget*, and forget is the whole point of an AI that must not give stale on-call advice.
+A skeptical reader will (rightly) ask "isn't this just RAG?" Our answer is specific and honest: Cognee infers a graph from raw prose with **zero schema**, queries graph + vectors **together**, and — the part RAG fundamentally cannot do — performs a **true forget** that removes a system from memory at every layer. We don't claim the graph beats RAG at every turn; we claim it gives us *forget*, and forget is the whole point of an AI that must not give stale on-call advice.
 
 ## Related
 

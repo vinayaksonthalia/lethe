@@ -102,12 +102,12 @@ The vector half uses **local fastembed** (`BAAI/bge-small-en-v1.5`), not a paid 
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **"Vectors find what's relevant; the graph finds what's connected to it"** is the one-sentence pitch for the hybrid, and it's literally true of `GRAPH_COMPLETION`.
 - **Two stores from one pass** is a clean engineering story: one `cognify()` call, graph + vectors + metadata, all on disk, served instantly.
 - **The "LLM is the combiner" insight** is what makes the whole system tunable — and we earned it by reading Cognee's source, not guessing.
-- **The honest graph-vs-RAG framing** signals real engineering judgment, which judges reward more than hype.
+- **The honest graph-vs-RAG framing** signals real engineering judgment, which readers reward more than hype.
 
 ---
 

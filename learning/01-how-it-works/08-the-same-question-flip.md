@@ -1,6 +1,6 @@
 # 08 — The Same-Question Flip (the money shot)
 
-**In one line:** Ask *the exact same question* before and after forgetting `legacy-cache`, and the answer reroutes from the dead system to the correct surviving path — a controlled experiment where **only the corpus changed**, which is the single most convincing thing to show a judge.
+**In one line:** Ask *the exact same question* before and after forgetting `legacy-cache`, and the answer reroutes from the dead system to the correct surviving path — a controlled experiment where **only the corpus changed**, which is the single most convincing thing to show a reader.
 
 ## ELI10
 
@@ -73,12 +73,12 @@ Temperature 0 helps here too: decoding is deterministic, so the same question + 
 A **single forget mutates the persisted graph**. If you run the AFTER state and then try to run BEFORE again, legacy-cache is already gone. So:
 
 - **Always reset the golden snapshot before a demo run.** Use `reset_demo.py` to restore `golden_snapshot/` — it's deterministic, instant, and **zero quota** (no re-cognify). Never re-run `setup.py` mid-demo and never gamble on a rebuild loop.
-- Drive the flip through the **real HTTP routes** (`/ask`, `/forget`) — the same path the demo UI uses — so what the judge sees is what actually runs.
+- Drive the flip through the **real HTTP routes** (`/ask`, `/forget`) — the same path the demo UI uses — so what you see is what actually runs.
 - **Read the actual answer strings.** Never substring-score them ("does it contain the word legacy-cache?") — that's the same trap as the fragment bug. Read the sentence.
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **It's the single most convincing 30 seconds.** Same question, two answers, one cause. A judge needs no graph-theory background to feel it.
+- **It's the single most convincing 30 seconds.** Same question, two answers, one cause. You need no graph-theory background to feel it.
 - **It's the thesis made visible:** static memory would still say "flush the legacy-cache." Ours *forgets* and reroutes — *AI that forgets the stale thing.*
 - **It's defensible.** Because it's a real controlled experiment (one variable) backed by structural + behavioral verification, it survives a skeptical "are you sure it didn't just get lucky?" — the answer is "we ran it 12+ times at temp 0 with the facts physically deleted from disk."
 

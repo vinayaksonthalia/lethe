@@ -1,10 +1,10 @@
-# Judge & Newbie Questions, Answered
+# Hard Questions, Answered
 
-**In one line:** Every sharp question a hackathon judge (or a curious beginner) might fire at Lethe, with a short, honest, grounded answer.
+**In one line:** Every sharp question someone might fire at Lethe — a skeptical engineer or a curious beginner — with a short, honest, grounded answer.
 
 ## ELI10
 
-Imagine you built a robot librarian that reads your team's notebooks and learns who depends on whom. A judge walks up and starts poking it: "How do you actually *know* this? What if you're wrong? What did you delete?" This page is the robot's honest answers to all those pokes — no bluffing.
+Imagine you built a robot librarian that reads your team's notebooks and learns who depends on whom. Someone walks up and starts poking it: "How do you actually *know* this? What if you're wrong? What did you delete?" This page is the robot's honest answers to all those pokes — no bluffing.
 
 ---
 

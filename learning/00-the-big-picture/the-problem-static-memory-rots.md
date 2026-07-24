@@ -90,9 +90,9 @@ Claiming only the first layer would be overclaiming. Stating the limit out loud 
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **It reframes the category.** Judges have seen a hundred "AI that remembers your docs" demos. "AI that forgets the *wrong* docs" is a fresh, defensible angle.
+- **It reframes the category.** Readers have seen a hundred "AI that remembers your docs" demos. "AI that forgets the *wrong* docs" is a fresh, defensible angle.
 - **It maps to a real cost.** Stale advice during an incident isn't a cute bug; it's downtime and lost revenue. The thesis is grounded in an actual operational failure mode.
 - **It forces intellectual honesty.** By distinguishing corpus-deletion from training-knowledge, we show we understand *where the guarantee ends* — which is more persuasive than pretending it's absolute.
 - **It justifies the architecture.** A forget capability is only meaningful if the data is structured enough to delete cleanly. That's the bridge to *why Cognee* — see [what-we-built.md](what-we-built.md).

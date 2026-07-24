@@ -104,7 +104,7 @@ Same question — "If auth-service latency is high, what should I check?" — te
 
 The dead system vanishes and the answer reroutes to the surviving, correct path. Full analysis of *why this flip is a controlled experiment* is in [08-the-same-question-flip.md](08-the-same-question-flip.md).
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **It's the differentiator.** Remember is table stakes; **forget** is the leg the starter and the integrations shelf both lack. It directly serves the thesis: *static memory rots.*
 - **It's a real hard delete, and we can show it on disk** (18 → 16 files) — not a soft "exclude" flag dressed up as deletion.

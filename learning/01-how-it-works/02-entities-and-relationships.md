@@ -139,9 +139,9 @@ Clean. Same retrieval, same graph — the only change was the instruction tellin
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **The merge is the quiet hero of intelligence.** "It combined facts from two different documents I never linked" is a sentence that makes a judge sit up — and it's true, because of coreference resolution onto one node.
+- **The merge is the quiet hero of intelligence.** "It combined facts from two different documents I never linked" is a sentence that makes a reader sit up — and it's true, because of coreference resolution onto one node.
 - **The schema is principled, not ad-hoc.** We can show the exact `Node`/`Edge` shape from Cognee source, so the structure isn't hand-wavy.
 - **We fixed a real leak honestly.** Showing the `--[owns]-->` leak and its prompt-level fix demonstrates we understand *where* the structure ends and the *presentation* begins.
 

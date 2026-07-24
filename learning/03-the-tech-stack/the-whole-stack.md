@@ -128,9 +128,9 @@ Three reasons:
 
 The data directory lives at `/Users/vinayak/.cognee-incident-detective/` (a no-space path on purpose, since spaces in paths trip up some tooling). The three stores inside it — Kùzu (graph), LanceDB (vectors), SQLite (relational metadata) — are the persisted brain that `app.py` loads and `golden_snapshot/` freezes.
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **It demonstrates production thinking, not just a notebook.** Separating an expensive offline build from a cheap online serve is exactly how real RAG/graph systems ship. A judge sees that this isn't a one-off script.
+- **It demonstrates production thinking, not just a notebook.** Separating an expensive offline build from a cheap online serve is exactly how real RAG/graph systems ship. The reader sees that this isn't a one-off script.
 - **The instant-start server makes the demo bulletproof.** No waiting, no "let it think" pauses. Ask → answer.
 - **The forget hero is wired all the way through** — from `ledger.json` → `forget_system()` → the `/forget` route → a button in the UI — so it's not a buried function, it's a live, clickable capability.
 - **`CACHING=false` is the difference between the hero beat working and looking broken on stage.** Knowing *why* it's there (and why it must be set before import) is the kind of detail that separates "I wired up a library" from "I understand the system".

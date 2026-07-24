@@ -103,7 +103,7 @@ This is the **raw graph showing through**. The user must never see this format â
 
 `only_context` is also a debugging hero: it lets us check the **structural** layer independently of the LLM. We used it to verify the forget hero left **zero legacy-cache residue** across five different phrasings (see [07-the-forget-hero.md](07-the-forget-hero.md)).
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **It's genuinely hybrid.** "Vectors find what's relevant; the graph finds what's connected" is the heart of *Best Use of Cognee* â€” most RAG demos only do the vector half.
 - **It's honest.** We don't claim the graph wins every query at this size. We claim it wins on **relationship and multi-hop** questions, and we can show `only_context` to prove the retrieval is real.

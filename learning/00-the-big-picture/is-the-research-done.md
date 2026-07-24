@@ -16,7 +16,7 @@ That's where this project is. The thinking and the building are done. The decora
 
 ## The honest done / not-done line
 
-This matters for a hackathon judge, so let's be precise and avoid overclaiming.
+This matters for a skeptical reader, so let's be precise and avoid overclaiming.
 
 **Done — and verified this session against the actual running code and Cognee source:**
 
@@ -82,9 +82,9 @@ flowchart LR
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **"Research done, limits stated" beats "everything works perfectly."** Judges trust a team that knows exactly where its guarantees end more than one that overclaims.
+- **"Research done, limits stated" beats "everything works perfectly."** Readers trust a team that knows exactly where its guarantees end more than one that overclaims.
 - **The five capabilities map to real workflows**, and the four audiences show the project isn't a toy — it has a believable user on the other side of every feature.
 - **The remaining work is all presentation**, which means there's no risk of an unsolved core question blowing up on demo day — the hard part is behind us and verified.
 

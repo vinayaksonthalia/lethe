@@ -93,9 +93,9 @@ Three wins, one variable. That's strong evidence the prompt is the **high-levera
 
 Knowing where the wheel stops working is as important as knowing it works.
 
-## Why it matters (demo / judging)
+## Why it matters
 
-- **It explains the whole system in one sentence:** "the LLM is the combiner; the prompt is the steering wheel." Judges immediately understand why a *prompt* change can flip behavior so dramatically.
+- **It explains the whole system in one sentence:** "the LLM is the combiner; the prompt is the steering wheel." Readers immediately understand why a *prompt* change can flip behavior so dramatically.
 - **The leak story is memorable and honest:** a raw `--[owns]--->` appearing in output is a clean, true window into the architecture, not a bug we're hiding.
 - **It sets up the forget hero:** because context is influence not law, "the graph is clean" alone isn't proof — which is exactly why we verified forget on **two** layers.
 

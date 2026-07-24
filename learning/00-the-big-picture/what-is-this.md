@@ -87,16 +87,16 @@ We checked *both* because deleting data from the helper's library doesn't erase 
 
 ---
 
-## Judge version (one paragraph)
+## In one paragraph
 
 Lethe is a self-hosted on-call triage assistant for the WeMakeDevs Cognee hackathon. It ingests a team's plain-prose incident runbooks with Cognee, which infers a hybrid knowledge graph (Kùzu) plus vector store (LanceDB) from unstructured text with no schema or tagging, and answers via `SearchType.GRAPH_COMPLETION` — vector recall finds what's relevant, graph traversal finds what's connected, and the LLM combines both into one plain-language answer governed by a custom triage system prompt. The differentiator is **forget**: when a system is decommissioned, the app hard-deletes its documents from the corpus (raw files + graph nodes/edges + embeddings), so the assistant stops giving stale advice. We prove forget both structurally (zero residue across phrasings, file count drops 18→16) and behaviorally (the retired system never resurfaces under adversarial re-asking). The thesis: everyone is building AI that remembers *more*; the real on-call failure is AI that confidently remembers the *wrong, stale* thing — and `forget` is precisely the capability the official starter project lacks.
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **It's a felt problem.** Anyone who has been on-call knows the terror of stale docs sending you down a dead end. The demo lands emotionally because the pain is real.
-- **The hero beat is visible in one screen.** Same question, asked twice, answer flips and the dead system vanishes. No explanation needed — the judge *sees* it.
+- **The hero beat is visible in one screen.** Same question, asked twice, answer flips and the dead system vanishes. No explanation needed — you *see* it.
 - **It's honest.** We don't claim the AI is perfect. We show exactly what forget guarantees (data is gone) and what it can't guarantee (the model's training priors), and we verified both layers.
 - **It's the missing leg.** Remember and learn are common; **forget** is the capability the official "companybrain" starter doesn't have, which is what makes this a genuine contribution rather than a clone.
 

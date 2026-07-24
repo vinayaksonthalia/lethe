@@ -167,9 +167,9 @@ A single `forget` **mutates the persisted graph**. If you run the forget demo an
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
-This saga is the spine of the blog and a credibility multiplier in front of judges. It shows we didn't just get a green demo — we **understood our system well enough to find a non-obvious root cause**, prove fixes with controlled experiments, and resist three different automation traps that would have wasted quota and produced false confidence. A judge who hears "the bug looked like the build, looked like the question, but was actually the default prompt — and here's the `only_context` evidence and the three-experiment proof" is hearing an engineer who can be trusted, not a feature list. And the honest ceiling ("we stopped tuning here, on purpose, because it's an inference limit") is exactly the kind of restraint that separates a real project from a demo-ware shell.
+This saga is the spine of the blog and a credibility multiplier to skeptical readers. It shows we didn't just get a green demo — we **understood our system well enough to find a non-obvious root cause**, prove fixes with controlled experiments, and resist three different automation traps that would have wasted quota and produced false confidence. Anyone who hears "the bug looked like the build, looked like the question, but was actually the default prompt — and here's the `only_context` evidence and the three-experiment proof" is hearing an engineer who can be trusted, not a feature list. And the honest ceiling ("we stopped tuning here, on purpose, because it's an inference limit") is exactly the kind of restraint that separates a real project from a demo-ware shell.
 
 ---
 

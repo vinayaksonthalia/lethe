@@ -115,11 +115,11 @@ Recognizing the ceiling is itself a result: we stopped throwing prompt revisions
 
 A trap we fell into: trying to *measure* answer quality with a string check (e.g. "does the answer contain a period / more than one word?"). That's the same lazy mistake the model itself makes when it answers with a fragment — judging strings by their shape instead of their meaning. The only reliable check was **reading the actual answer strings** with human eyes, through the real HTTP routes. A grep-based "is it fluent yet" gate gives false passes.
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **It's the cleanest evidence in the project that you understand the architecture.** "The LLM is the combiner, so the prompt is the control surface" is a precise, true, non-obvious claim — and we can show three controlled experiments backing it.
 - **The honesty clause is what makes the forget hero *provable*.** Without it, "it forgot" is just a clean graph; with it, the system actually *says* it forgot. Demo-critical.
-- **Stating the ceiling builds trust.** Claiming "perfect, no hallucination" would be an overclaim a sharp judge would catch in 30 seconds. Saying "the prompt is high-leverage but bounded, here's exactly where it stops" is far stronger.
+- **Stating the ceiling builds trust.** Claiming "perfect, no hallucination" would be an overclaim a sharp reader would catch in 30 seconds. Saying "the prompt is high-leverage but bounded, here's exactly where it stops" is far stronger.
 
 ## Related
 

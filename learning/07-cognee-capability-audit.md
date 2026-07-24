@@ -2,7 +2,7 @@
 
 _Researched 2026-06-24 against **the docs** (docs.cognee.ai — llms-core / llms-api / llms-mcp / llms-cloud shards + guides) **and ground-truthed against our installed `cognee 1.1.3`** by probing the actual API (`inspect.signature`, the `SearchType` enum, the startup banner). Where the docs and our installed package disagreed, **the installed package wins** — every "available to us" claim below was verified in code, not paraphrased from docs._
 
-> **Why this doc exists:** "Best Use of Cognee" is a judged criterion, scored on the **depth** of how we use the memory lifecycle. We were using a sliver of the API. This maps the whole surface so we can choose what to add — and it corrects two long-standing wrong beliefs in our own notes.
+> **Why this doc exists:** Lethe should use the **depth** of Cognee's memory lifecycle, not a sliver of the API. This maps the whole surface so we can choose what to add — and it corrects two long-standing wrong beliefs in our own notes.
 
 ---
 
@@ -165,7 +165,7 @@ This isn't "the feature is bad" — it's "using it silently would undercut our o
 ## 7. What this means for the hackathon
 
 - **"Best Use of Cognee" depth** today = remember + recall + the rarely-used **forget**. We can deepen it credibly and cheaply with **multi-search-type routing** (§4.1) and, if we have a day, an **MCP server** (§4.5) — both show we use the lifecycle, not a thin wrapper.
-- **Technical Excellence / de-risking** = the **custom `graph_model` probe** (§4.3) is the most valuable experiment we can run: it could harden the demo *and* unblock the version pin, and it shows we understand *why* extraction fails on weak models (a sophisticated answer for judges).
+- **Technical Excellence / de-risking** = the **custom `graph_model` probe** (§4.3) is the most valuable experiment we can run: it could harden the demo *and* unblock the version pin, and it shows *why* extraction fails on weak models.
 - **README/blog material** — this audit is the spine of an honest "how we use Cognee, and what we deliberately don't" section (the *don't* — Cloud, auto-feedback — is as credible as the *do*).
 
 ---

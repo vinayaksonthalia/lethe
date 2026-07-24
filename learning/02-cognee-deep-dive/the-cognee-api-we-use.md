@@ -128,9 +128,9 @@ This is the **first** meaningful line in `incident_brain.py`, set **before `impo
 | `cognee.forget(data_id, dataset="main_dataset")` | Hard delete: record + raw file + graph + vectors | `forget_system()`; the hero beat |
 | `CACHING=false` (env, pre-import) | No response cache | So post-forget queries are live |
 
-## Why it matters (demo / judging)
+## Why it matters
 
-This file is the proof that our "magic" is a small, legible set of real Cognee calls — not hand-waving. The judge can see exactly where remember (`add`/`cognify`), recall (`search`), and forget (`forget`) live, why we override the default prompt, why we can verify retrieval cheaply (`only_context`), and why caching is off so the live forget demo can't be faked by a stale cache.
+This file is the proof that our "magic" is a small, legible set of real Cognee calls — not hand-waving. You can see exactly where remember (`add`/`cognify`), recall (`search`), and forget (`forget`) live, why we override the default prompt, why we can verify retrieval cheaply (`only_context`), and why caching is off so the live forget demo can't be faked by a stale cache.
 
 ## Related
 

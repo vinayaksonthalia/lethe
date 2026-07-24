@@ -83,7 +83,7 @@ Cognee can also *learn/improve* memory over time. In our project this is a **wea
 - **Hybrid by default:** every cognify pass populates both a graph and a vector index, and search queries both together.
 - **Forget is a real, hard delete** — graph + vectors + raw file — not a soft "exclude from results" flag. (Cognee *does* offer `memory_only=True`, which keeps the raw file; we deliberately use the full delete.)
 
-## Why it matters (demo / judging)
+## Why it matters
 
 Most hackathon "memory" projects show an AI that remembers **more**. Our thesis is that the harder, realer problem is an AI that remembers the **wrong or stale thing**. Cognee is the one framework that gives us all three legs — remember, recall, **forget** — out of one prose-to-graph pipeline, which is why "Lethe" can demo a system that *un-learns* a decommissioned service and stops giving stale advice. The graph + vector hybrid, built automatically from plain runbooks, is the core of our "Best Use of Cognee" story.
 

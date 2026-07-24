@@ -95,11 +95,11 @@ Concretely: an auth-service question reliably retrieves auth chunks via vectors,
 
 ---
 
-## Why it matters (demo / judging)
+## Why it matters
 
 - **Robust to phrasing** = the live demo doesn't depend on magic wording. Type a sloppy on-call question, get the right doc.
 - **Zero embedding quota** = we can reset and re-run the demo all day deterministically, and we could iterate hundreds of times in dev without cost. That's a concrete self-hosted-track win.
-- **We name the top-k limit out loud** and explain how the graph mitigates it. Stating a real limitation *and* its mitigation is exactly the kind of honesty that earns judge trust — and it ties the vector and graph halves into one coherent story.
+- **We name the top-k limit out loud** and explain how the graph mitigates it. Stating a real limitation *and* its mitigation is exactly the kind of honesty that earns trust — and it ties the vector and graph halves into one coherent story.
 
 ---
 

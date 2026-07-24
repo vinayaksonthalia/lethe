@@ -75,9 +75,9 @@ The **one** remote dependency is the LLM, and even that is an **open-weights** m
 - **`CACHING=false`** is set in code before importing Cognee so a post-forget query reflects the live, now-clean graph instead of a stale cached answer. (Covered in [the-cognee-api-we-use.md](the-cognee-api-we-use.md).)
 - **Demo reset = snapshot/restore, not rebuild.** `snapshot_golden.py` captures a clean build into `golden_snapshot/`; `reset_demo.py` restores it. This is **instant, zero quota, and deterministic** — used *instead of* re-running `setup.py`. It matters because the local stores are persistent: a single forget mutates the on-disk graph, so we always restore the golden snapshot before a demo run.
 
-## Why it matters (demo / judging)
+## Why it matters
 
-This config is what makes the project genuinely **self-hosted and quota-light**: local embeddings meant we could iterate dozens of times for free, local stores mean the data and graph live on the machine, and a swappable open-weights LLM means "fully offline" is a realistic next step rather than a fantasy. For a judge weighing the self-hosted track, the line is simple and true: *all the memory lives locally; only the final wording is outsourced, and even that can be brought in-house.*
+This config is what makes the project genuinely **self-hosted and quota-light**: local embeddings meant we could iterate dozens of times for free, local stores mean the data and graph live on the machine, and a swappable open-weights LLM means "fully offline" is a realistic next step rather than a fantasy. For anyone weighing the self-hosted track, the line is simple and true: *all the memory lives locally; only the final wording is outsourced, and even that can be brought in-house.*
 
 ## Related
 
